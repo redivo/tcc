@@ -15,3 +15,9 @@
 *.exe
 *.out
 *.app
+
+# Temporary Files
+*.swp
+*.b#*
+*.s#*
+*.dia.autosave
