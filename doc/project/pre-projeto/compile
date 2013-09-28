@@ -1,0 +1,1 @@
+pdflatex pre-projeto.tex && pdflatex pre-projeto.tex && bibtex pre-projeto.aux && pdflatex pre-projeto.tex && pdflatex pre-projeto.tex && evince pre-projeto.pdf
