@@ -20,4 +20,17 @@
 *.swp
 *.b#*
 *.s#*
+*.l#*
 *.dia.autosave
+*.bbl
+*.blg
+*.dvi
+*.ent
+*.lof
+*.log
+*.los
+*.lot
+*.toc
+*.log
+*.aux
+tmp/*
