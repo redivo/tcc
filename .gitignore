@@ -34,3 +34,9 @@
 *.log
 *.aux
 tmp/*
+*tags
+
+# Ignore images
+*.elf
+*.pc
+*.hex
