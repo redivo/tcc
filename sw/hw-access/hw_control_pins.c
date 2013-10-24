@@ -24,6 +24,12 @@ hw_pin_t Sfp_disable_seq[] =
 	{4, 11, },
 };
 
+hw_pin_t Sfp_supply_disable[] =
+{
+	{4, 14, },
+	{4, 15, },
+};
+
 hw_pin_t Sfp_select = {4, 8, };
 
 /******************************************************************************/
@@ -35,6 +41,14 @@ int hw_ctrl_pins_init(void)
 	/* Initialize SFP Select pin. Initialize on SFP 0 */
 	CHK(hw_pin_set_dir(Sfp_select.port, Sfp_select.pin, OUTPUT));
 	CHK(hw_set_value(Sfp_select.port, Sfp_select.pin, 0));
+
+	/* Initialize with both SFPs' spply disabled */
+	// TODO
+	CHK(hw_pin_set_dir(Sfp_supply_disable[0].port, Sfp_supply_disable[0].pin, OUTPUT));
+	CHK(hw_set_value(Sfp_supply_disable[0].port, Sfp_supply_disable[0].pin, 1));
+
+	CHK(hw_pin_set_dir(Sfp_supply_disable[1].port, Sfp_supply_disable[1].pin, OUTPUT));
+	CHK(hw_set_value(Sfp_supply_disable[1].port, Sfp_supply_disable[1].pin, 1));
 
 	/* Initialize SFP Disable Sequencer pin. Initialize disabled */
 	FOR_EACH_SFP_DIS_SEQ(seq) {
@@ -52,6 +66,7 @@ int hw_sfp_insert(int sfp)
 	int seq;
 
 	CHK(hw_set_value(Sfp_select.port, Sfp_select.pin, !!sfp));
+	CHK(hw_set_value(Sfp_supply_disable[sfp].port, Sfp_supply_disable[sfp].pin, 0));
 
 	/* "Insert" pins on order */
 	FOR_EACH_SFP_DIS_SEQ(seq) {
@@ -73,6 +88,8 @@ int hw_sfp_remove(int sfp)
 		CHK(hw_set_value(Sfp_disable_seq[seq].port, Sfp_disable_seq[seq].pin, 1));
 		// TODO insertion sleep
 	}
+
+	CHK(hw_set_value(Sfp_supply_disable[sfp].port, Sfp_supply_disable[sfp].pin, 1));
 
 	return 0;
 }

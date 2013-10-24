@@ -28,5 +28,7 @@ int hw_i2c_init(void);
 
 /******************************************************************************/
 
+int hw_i2c_read(int dev_addr, int reg_addr);
+
 #endif /* __HW_I2C_INIT */
 

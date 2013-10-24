@@ -46,3 +46,31 @@ int cli_debug_write(char *line, int num_of_args)
 
 /******************************************************************************/
 
+int cli_i2c_read(char *line, int num_of_args)
+{
+#ifdef DEBUG_MODE
+	char dev_str[MAX_ARG_SIZE];
+	char reg_str[MAX_ARG_SIZE];
+	int dev, reg, value;
+
+	/* Get the I²C device address */
+	CHK(cli_get_word(line, dev_str, sizeof(dev_str), 2));
+
+	/* Get the register address */
+	CHK(cli_get_word(line, reg_str, sizeof(reg_str), 3));
+
+	/* Convert strings to int */
+	dev = (int) strtol(dev_str, &dev_str, 16);
+	reg = (int) strtol(reg_str, &reg_str, 16);
+
+	/* Call I²C read function */
+	value = hw_i2c_read(dev, reg);
+
+	pprintf("Device 0x%02x, Reg 0x%02x = 0x%x\r\n", dev, reg, value);
+
+#endif /* DEBUG_MODE */
+	return 0;
+}
+
+/******************************************************************************/
+

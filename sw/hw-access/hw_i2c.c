@@ -13,14 +13,6 @@
 #define SMARTCARD_LEITURA 0xA1
 #define SMARTCARD_ESCRITA 0xA0
 
-#define ENVIOU_START 0x08
-#define ENVIOU_ENDERECO_ESCRITA 0x18
-#define ENVIOU_ENDERECO_LEITURA	0x50
-#define ENVIOU_ENDERECO_MEMORIA 0x28
-#define FIM_ESCRITA	0x28
-#define FIM_LEITURA 0x58
-#define RECEBEU_ACK 0x40
-
 /* Boar clock frequency in kHz TODO */
 #define BOARD_CLOCK_FREQ	12000
 
@@ -29,7 +21,7 @@
 #define I2C_IF_TO_SWITCH_ADDR_0	1 // Interface to be linked on switch bus. It works like slave.
 #define I2C_IF_TO_SWITCH_ADDR_1	2 // Interface to be linked on switch bus. It works like slave.
 
-/* I²C interface power bit in Poer Control for Peripherals (PCONP) register */
+/* I²C interface power bit in Poer Control for Peripherals (PCONP) register (Table 56 from LPC23xx's datasheet) */
 #define PCONP_I2C_TO_SFP		(1 << 7)
 #define PCONP_I2C_TO_SW_ADDR_0	(1 << 19)
 #define PCONP_I2C_TO_SW_ADDR_1	(1 << 26)
@@ -37,27 +29,27 @@
 /* I²C interface mode Pin Selection, offsets and values */
 #define PINSEL_I2C_TO_SFP_SDA				PINSEL1
 #define PINSEL_I2C_TO_SFP_SCL				PINSEL1
-#define PINSEL_I2C_TO_SFP_SDA_OFFSET		22
-#define PINSEL_I2C_TO_SFP_SCL_OFFSET		24
-#define PINSEL_I2C_TO_SFP_SDA_VALUE			1
-#define PINSEL_I2C_TO_SFP_SCL_VALUE			1
+#define PINSEL_I2C_TO_SFP_SDA_OFFSET		22		// See Table 107 from LPC23xx's datasheet
+#define PINSEL_I2C_TO_SFP_SCL_OFFSET		24		// See Table 107 from LPC23xx's datasheet
+#define PINSEL_I2C_TO_SFP_SDA_VALUE			1		// See Table 107 from LPC23xx's datasheet
+#define PINSEL_I2C_TO_SFP_SCL_VALUE			1		// See Table 107 from LPC23xx's datasheet
 #define PINSEL_I2C_TO_SW_ADDR_0_SDA			PINSEL1
 #define PINSEL_I2C_TO_SW_ADDR_0_SCL			PINSEL1
-#define PINSEL_I2C_TO_SW_ADDR_0_SDA_OFFSET	6
-#define PINSEL_I2C_TO_SW_ADDR_0_SCL_OFFSET	8
-#define PINSEL_I2C_TO_SW_ADDR_0_SDA_VALUE	3
-#define PINSEL_I2C_TO_SW_ADDR_0_SCL_VALUE	3
+#define PINSEL_I2C_TO_SW_ADDR_0_SDA_OFFSET	6		// See Table 107 from LPC23xx's datasheet
+#define PINSEL_I2C_TO_SW_ADDR_0_SCL_OFFSET	8		// See Table 107 from LPC23xx's datasheet
+#define PINSEL_I2C_TO_SW_ADDR_0_SDA_VALUE	3		// See Table 107 from LPC23xx's datasheet
+#define PINSEL_I2C_TO_SW_ADDR_0_SCL_VALUE	3		// See Table 107 from LPC23xx's datasheet
 #define PINSEL_I2C_TO_SW_ADDR_1_SDA			PINSEL0
 #define PINSEL_I2C_TO_SW_ADDR_1_SCL			PINSEL0
-#define PINSEL_I2C_TO_SW_ADDR_1_SDA_OFFSET	20
-#define PINSEL_I2C_TO_SW_ADDR_1_SCL_OFFSET	22
-#define PINSEL_I2C_TO_SW_ADDR_1_SDA_VALUE	2
-#define PINSEL_I2C_TO_SW_ADDR_1_SCL_VALUE	2
+#define PINSEL_I2C_TO_SW_ADDR_1_SDA_OFFSET	20		// See Table 106 from LPC23xx's datasheet
+#define PINSEL_I2C_TO_SW_ADDR_1_SCL_OFFSET	22		// See Table 106 from LPC23xx's datasheet
+#define PINSEL_I2C_TO_SW_ADDR_1_SDA_VALUE	2		// See Table 106 from LPC23xx's datasheet
+#define PINSEL_I2C_TO_SW_ADDR_1_SCL_VALUE	2		// See Table 106 from LPC23xx's datasheet
 
 /******************************************************************************/
 /**
  * \typedef i2c_control_t
- * \brief This typedef is an union to describe I²C Control register.
+ * \brief This typedef is an union to describe I²C Control register. See item 21.8.1 from LPC23xx's datasheet.
  */
 typedef union {
 	struct {
@@ -259,8 +251,8 @@ int hw_i2c_init(void)
 	CHK(hw_set_i2c_address(I2C_IF_TO_SWITCH_ADDR_1, 0));
 
 	// TODO
-//	I20SCLH = 100; /* Tempo alto do SCL */
-//	I20SCLL = 100; /* Tempo baixo do SCL */
+	I20SCLH = 100; /* Tempo alto do SCL */
+	I20SCLL = 100; /* Tempo baixo do SCL */
 
 #endif
 	return 0;
@@ -278,7 +270,7 @@ void escreveI2C0(char dado, int endereco)
 	{
 		switch(I20STAT)
 		{
-			case ENVIOU_START:
+			case SEND_START_BIT:
 				//lcd_dado('2'); 
 				I20DAT = SMARTCARD_ESCRITA;
 				I20CONSET = ACK;
@@ -318,52 +310,62 @@ void escreveI2C0(char dado, int endereco)
 }
 
 
+#endif
+
+#define SEND_START_BIT			0x08
+#define END_OF_RECEIVE			0x58
+#define ENVIOU_ENDERECO_ESCRITA 0x18
+#define ENVIOU_ENDERECO_LEITURA	0x50
+#define ENVIOU_ENDERECO_MEMORIA 0x28
+#define RECEBEU_ACK				0x40
+#define FIM_ESCRITA				0x28
+#define FIM_LEITURA				0x58
 
 
-int leI2C0(int endereco)
+int hw_i2c_read(int dev_addr, int reg_addr)
 {
 #ifndef PC_COMPILATION
 	int leitura = 0;
 	int dado;
 
 	I20CONSET = START;
-	
-	while(I20STAT != FIM_LEITURA)
-	{		
-		switch(I20STAT)
+
+	while (I20STAT != END_OF_RECEIVE)
+	{
+		switch (I20STAT)
 		{
-			case ENVIOU_START: 
-				if(leitura == 0) //se eh a primeira vez que envia start
+			case SEND_START_BIT:
+				if (leitura == 0) //se eh a primeira vez que envia start
 				{
-					I20DAT = SMARTCARD_ESCRITA;
+					I20DAT = (dev_addr << 1);
 					leitura = 1;
 				}
 				else
-					I20DAT = SMARTCARD_LEITURA;
-	
+					I20DAT = (dev_addr << 1) + 1;
+
 				I20CONSET = ACK;
 				I20CONCLR = START_FLAG;
-				I20CONCLR = INT_FLAG; 
+				I20CONCLR = INT_FLAG;
 				break;
-		
+
 			case ENVIOU_ENDERECO_ESCRITA:
-				I20DAT = endereco;
+				I20DAT = reg_addr;
 				I20CONSET = ACK;
 				I20CONCLR = INT_FLAG;
 				break;
-		
+
 			case ENVIOU_ENDERECO_MEMORIA:
 				I20CONSET = STOP;
 				I20CONSET = ACK;
 				I20CONCLR = INT_FLAG;
 				I20CONSET = START;
 				break;
-	
+
 			case RECEBEU_ACK:
 				I20CONSET = ACK;
 				I20CONCLR = INT_FLAG;
 				break;
-	
+
 			case ENVIOU_ENDERECO_LEITURA:
 				dado = I20DAT;
 				I20CONSET = ACK;
@@ -379,4 +381,3 @@ int leI2C0(int endereco)
 #endif
 }
 
-#endif

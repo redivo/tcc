@@ -32,6 +32,11 @@ LFLAGS	= -nostartfiles
 # Flags for PC compilation
 CCPC	= gcc
 
+# Debug mode
+ifeq ($(DEBUG_EN),true)
+DEBUG_FLAG = -DDEBUG_MODE
+endif
+
 
 ################################################################################
 ## Compilation
@@ -44,7 +49,7 @@ all: $(TARGET).hex
 
 # Call C compiler
 %.o: %.c $(HEADERS)
-	$(CC) -c $(CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) $(DEBUG_FLAG) -o $@ $<
 
 # Compile assembly modules
 %.o: %.S

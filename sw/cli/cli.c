@@ -136,6 +136,12 @@ command_t Commands[] = {
 		.argumment_number = 2,
 		.callback = cli_debug_write,
 	},
+	{
+		.command = "i2c-r",
+		.help = "{HEX-DEV} {HEX-REG} Read a register from a I2C device.",
+		.argumment_number = 2,
+		.callback = cli_i2c_read,
+	},
 #endif /* DEBUG_MODE */
 };
 

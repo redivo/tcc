@@ -19,8 +19,8 @@
 /* Global Variables */
 hw_pin_t Leds[] =
 {
-	{4, 1, },
-	{4, 7, },
+	{4, 12, },
+	{4, 13, },
 };
 
 /******************************************************************************/
@@ -42,7 +42,7 @@ int hw_leds_init(void)
 
 int hw_enable_led(int led, bool enable)
 {
-	CHK(hw_set_value(Leds[led].port, Leds[led].pin, !enable));
+	CHK(hw_set_value(Leds[led].port, Leds[led].pin, enable));
 
 	return 0;
 }
