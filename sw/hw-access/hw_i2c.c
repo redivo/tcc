@@ -3,6 +3,7 @@
 #endif
 #include <string.h>
 #include "errors.h"
+#include "hw_vic_cpsr.h"
 
 #define START 0x20
 #define STOP  0x10
@@ -191,6 +192,30 @@ int hw_get_i2c_address(int i2c_number, unsigned char *address)
 
 /******************************************************************************/
 
+void hw_handle_irq_i2c_slv1(void) __attribute__ ((interrupt("IRQ")));
+void hw_handle_irq_i2c_slv2(void) __attribute__ ((interrupt("IRQ")));
+
+void hw_handle_irq_i2c_slv1(void)
+{
+	pprintf("===== IRQ RECEIVED 1 =====\r\n");
+	pprintf("  0x%x\r\n", I21STAT);
+}
+
+void hw_handle_irq_i2c_slv2(void)
+{
+	pprintf("===== IRQ RECEIVED 2 =====\r\n");
+	pprintf(" I21STAT      0x%x\r\n", I21STAT);
+	pprintf(" I22STAT      0x%x\r\n", I22STAT);
+	pprintf(" I21CONSET    0x%x\r\n", I21CONSET);
+	pprintf(" I22CONSET    0x%x\r\n", I22CONSET);
+	pprintf(" VICIRQStatus 0x%x\r\n", VICIRQStatus);
+	pprintf(" VICIntSelect 0x%x\r\n", VICIntSelect);
+	pprintf(" VICIntEnable 0x%x\r\n", VICIntEnable);
+
+}
+
+/******************************************************************************/
+
 int hw_i2c_init(void)
 {
 #ifndef PC_COMPILATION
@@ -223,7 +248,7 @@ int hw_i2c_init(void)
 	PCONP |= PCONP_I2C_TO_SW_ADDR_0;
 
 	/* Selec SCL and SDA mode to respective pins */
-	PINSEL_I2C_TO_SW_ADDR_0_SDA |= (PINSEL_I2C_TO_SW_ADDR_0_SDA_VALUE << PINSEL_I2C_TO_SW_ADDR_0_SDA_OFFSET);
+	PINSEL_I2C_TO_SW_ADDR_0_SDA |= (PINSEL_I2C_TO_SW_ADDR_1_SDA_VALUE << PINSEL_I2C_TO_SW_ADDR_0_SDA_OFFSET);
 	PINSEL_I2C_TO_SW_ADDR_0_SCL |= (PINSEL_I2C_TO_SW_ADDR_0_SCL_VALUE << PINSEL_I2C_TO_SW_ADDR_0_SCL_OFFSET);
 
 	/* Configure I²C interface */
@@ -231,6 +256,12 @@ int hw_i2c_init(void)
 	i2c_control.bits.assert_ack = 1;
 	CHK(hw_set_i2c_control(I2C_IF_TO_SWITCH_ADDR_0, i2c_control.reg));
 	CHK(hw_set_i2c_address(I2C_IF_TO_SWITCH_ADDR_0, 0));
+
+	/* TODO IRQ */
+	IRQdisable();
+	VICIntSelect &= ~(1 << 19);		/* i2c2=bit 30 como IRQ	*/
+	VICIntEnable |= (1 << 19);		/* Habilita int do i2c2 no VIC*/
+	VICVectAddr19 = (int)hw_handle_irq_i2c_slv1;	/* Vetor para atendimento do I2C2 */
 
 
 	/************************************************************************/
@@ -246,9 +277,16 @@ int hw_i2c_init(void)
 	PINSEL_I2C_TO_SW_ADDR_1_SCL |= (PINSEL_I2C_TO_SW_ADDR_1_SCL_VALUE << PINSEL_I2C_TO_SW_ADDR_1_SCL_OFFSET);
 
 	/* Configure I²C interface */
+	i2c_control.bits.enable = 1;
 	i2c_control.bits.assert_ack = 1;
 	CHK(hw_set_i2c_control(I2C_IF_TO_SWITCH_ADDR_1, i2c_control.reg));
 	CHK(hw_set_i2c_address(I2C_IF_TO_SWITCH_ADDR_1, 0));
+
+	/* TODO IRQ */
+	VICIntSelect &= ~(1 << 9);		/* i2c2=bit 30 como IRQ	*/
+	VICIntEnable |= (1 << 9);		/* Habilita int do i2c2 no VIC*/
+	VICVectAddr9 = (int)hw_handle_irq_i2c_slv2;	/* Vetor para atendimento do I2C2 */
+	IRQenable();
 
 	// TODO
 	I20SCLH = 100; /* Tempo alto do SCL */
@@ -335,26 +373,33 @@ int hw_i2c_read(int dev_addr, int reg_addr)
 		switch (I20STAT)
 		{
 			case SEND_START_BIT:
+				pprintf("line %d\r\n", __LINE__);
 				if (leitura == 0) //se eh a primeira vez que envia start
 				{
+					pprintf("line %d\r\n", __LINE__);
 					I20DAT = (dev_addr << 1);
 					leitura = 1;
 				}
-				else
+				else {
+					pprintf("line %d\r\n", __LINE__);
 					I20DAT = (dev_addr << 1) + 1;
+				}
 
+				pprintf("line %d\r\n", __LINE__);
 				I20CONSET = ACK;
 				I20CONCLR = START_FLAG;
 				I20CONCLR = INT_FLAG;
 				break;
 
 			case ENVIOU_ENDERECO_ESCRITA:
+				pprintf("line %d\r\n", __LINE__);
 				I20DAT = reg_addr;
 				I20CONSET = ACK;
 				I20CONCLR = INT_FLAG;
 				break;
 
 			case ENVIOU_ENDERECO_MEMORIA:
+				pprintf("line %d\r\n", __LINE__);
 				I20CONSET = STOP;
 				I20CONSET = ACK;
 				I20CONCLR = INT_FLAG;
@@ -362,11 +407,13 @@ int hw_i2c_read(int dev_addr, int reg_addr)
 				break;
 
 			case RECEBEU_ACK:
+				pprintf("line %d\r\n", __LINE__);
 				I20CONSET = ACK;
 				I20CONCLR = INT_FLAG;
 				break;
 
 			case ENVIOU_ENDERECO_LEITURA:
+				pprintf("line %d\r\n", __LINE__);
 				dado = I20DAT;
 				I20CONSET = ACK;
 				I20CONCLR = INT_FLAG;
@@ -374,6 +421,8 @@ int hw_i2c_read(int dev_addr, int reg_addr)
 				break;
 		}
 	}
+
+	pprintf("line %d\r\n", __LINE__);
 	I20CONSET = ACK;
 	I20CONSET = STOP;
 	I20CONCLR = INT_FLAG;
