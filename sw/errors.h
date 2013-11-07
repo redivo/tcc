@@ -1,5 +1,6 @@
 #ifndef __ERRORS_H
 #define __ERRORS_H
+#define DEBUG_MODE
 
 #include "hw_terminal.h"
 
@@ -37,6 +38,9 @@
 		case ERR_INVALID_REG:\
 			pprintf("\r\n ERROR [%d] Invalid register\r\n\n\n", _r);\
 			break;\
+		case -999:\
+			pprintf("\r\n COMMAND [%d] Resetting program\r\n\n\n", _r);\
+			return -999;\
 		case ERR_GENERIC:\
 		default:\
 			pprintf("\r\n ERROR [%d] Generic error\r\n\n\n", _r);\

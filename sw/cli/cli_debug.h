@@ -23,5 +23,7 @@ int cli_debug_write(char *line, int num_of_args);
 
 int cli_i2c_read(char *line, int num_of_args);
 
+int cli_reset(char *line, int num_of_args);
+
 #endif /* __CLI_DEBUG_H */
 

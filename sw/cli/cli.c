@@ -142,6 +142,12 @@ command_t Commands[] = {
 		.argumment_number = 2,
 		.callback = cli_i2c_read,
 	},
+	{
+		.command = "reset",
+		.help = "reset program.",
+		.argumment_number = 0,
+		.callback = cli_reset,
+	},
 #endif /* DEBUG_MODE */
 };
 

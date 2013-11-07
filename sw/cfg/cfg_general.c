@@ -34,7 +34,8 @@ int cfg_init(void)
 		CHK(cfg_set_fault_injection_enable(fi, 0));
 
 		/* Set device address based on default summing 1 to each next index */
-		CHK(cfg_set_fault_injection_dev_address(fi, DEFAULT_DEV_ADDR + fi));
+		CHK(cfg_set_fault_injection_dev_address(fi, DEFAULT_DEV_ADDR));
+//		CHK(cfg_set_fault_injection_dev_address(fi, DEFAULT_DEV_ADDR + fi));
 
 		/* Enable general read and write */
 		CHK(cfg_set_fault_injection_write_enable(fi, 1));

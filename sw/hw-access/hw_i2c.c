@@ -10,7 +10,7 @@
 #define ACK 0x04
 #define NACK  0x04
 #define START_FLAG 0x20
-#define INT_FLAG 0x008
+#define INT_FLAG 0x08
 #define SMARTCARD_LEITURA 0xA1
 #define SMARTCARD_ESCRITA 0xA0
 
@@ -146,15 +146,15 @@ int hw_set_i2c_address(int i2c_number, unsigned char address)
 #ifndef PC_COMPILATION
 	switch (i2c_number) {
 		case 0:
-			I20ADR = address;
+			I20ADR = address << 1;
 			break;
 
 		case 1:
-			I21ADR = address;
+			I21ADR = address << 1;
 			break;
 
 		case 2:
-			I22ADR = address;
+			I22ADR = address << 1;
 			break;
 
 		default:
@@ -197,13 +197,9 @@ void hw_handle_irq_i2c_slv2(void) __attribute__ ((interrupt("IRQ")));
 
 void hw_handle_irq_i2c_slv1(void)
 {
+#ifndef PC_COMPILATION
+	I22CONCLR = (1 << 3);
 	pprintf("===== IRQ RECEIVED 1 =====\r\n");
-	pprintf("  0x%x\r\n", I21STAT);
-}
-
-void hw_handle_irq_i2c_slv2(void)
-{
-	pprintf("===== IRQ RECEIVED 2 =====\r\n");
 	pprintf(" I21STAT      0x%x\r\n", I21STAT);
 	pprintf(" I22STAT      0x%x\r\n", I22STAT);
 	pprintf(" I21CONSET    0x%x\r\n", I21CONSET);
@@ -211,7 +207,144 @@ void hw_handle_irq_i2c_slv2(void)
 	pprintf(" VICIRQStatus 0x%x\r\n", VICIRQStatus);
 	pprintf(" VICIntSelect 0x%x\r\n", VICIntSelect);
 	pprintf(" VICIntEnable 0x%x\r\n", VICIntEnable);
+#endif
+}
 
+int temporario_inicializa_i2cs_slaves(void);
+
+void hw_handle_irq_i2c_slv2(void)
+{
+#ifndef PC_COMPILATION
+	VICVectAddr = 0;
+
+//	pprintf("\r\n===== IRQ RECEIVED 2 =====\r\n");
+//	pprintf(" VICIRQStatus 0x%x\r\n", VICIRQStatus);
+//	pprintf(" VICIntSelect 0x%x\r\n", VICIntSelect);
+//	pprintf(" VICIntEnable 0x%x\r\n", VICIntEnable);
+//	pprintf(" I2C 2 status:  0x%x\r\n", I22STAT);
+//	pprintf(" I2C 2 data:    0x%x\r\n", I22DAT);
+//	pprintf(" I2C 2 control: 0x%x\r\n", I22CONSET);
+
+	switch (I22STAT) {
+		case 0x60:
+//			pprintf("0x60, escrita requisitada no meu endereço.\r\n");
+//			pprintf("1 ");
+			I22CONSET = ACK;
+			I22CONCLR = INT_FLAG;
+//			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
+//			pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
+//			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
+//			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
+			break;
+
+		case 0x80:
+//			pprintf("0x80, received data\r\n");
+//			pprintf("2 ");
+			I22CONSET = ACK;
+			I22CONCLR = INT_FLAG;
+//			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
+//			pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
+//			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
+			break;
+
+		case 0xA0:
+//			pprintf("3 ");
+//			pprintf("0xA0, stop bit.\r\n");
+			I22CONSET = ACK;
+			I22CONCLR = INT_FLAG;
+//			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
+//			pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
+//			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
+			break;
+
+		case 0xA8:
+//			pprintf("0xA8, enviando dado.\r\n");
+			I22DAT = 0x65;
+//			pprintf("4 ");
+			I22CONSET = ACK;
+			I22CONCLR = INT_FLAG;
+//			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
+//			pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
+//			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
+			break;
+
+		case 0xB8:
+//			pprintf("5 ");
+//			pprintf("0xB8, dado recebido pelo master.\r\n");
+			I22DAT = 0x65;
+			I22CONSET = ACK;
+			I22CONCLR = INT_FLAG;
+//			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
+//			pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
+//			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
+			break;
+
+		case 0xC0:
+//			pprintf("0xC0, fim da transmição NACK reebido.\r\n");
+//			pprintf("6 ");
+			I22CONSET = ACK;
+			I22CONCLR = INT_FLAG;
+//			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
+//			pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
+//			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
+			break;		
+
+		default:
+			pprintf("7 0x%x", I22STAT);
+//			pprintf("I dont know\r\n");
+			I22CONSET = ACK;
+			I22CONCLR = INT_FLAG;
+//			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
+//			pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
+//			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
+			break;
+	}
+#endif
+}
+
+int temporario_inicializa_i2cs_slaves(void)
+{
+#ifndef PC_COMPILATION
+	/* Turn on power */
+	PCONP |= (1 << 19); // I2C1
+	PCONP |= (1 << 26); // I2C2
+
+	/* Selec SCL and SDA mode to respective pins */
+	PINSEL1 |= (3 << 6);  // SDA I2C1
+	PINSEL1 |= (3 << 8);  // SCL I2C1
+	PINSEL0 |= (2 << 20); // SDA I2C2
+	PINSEL0 |= (2 << 22); // SCL I2C2
+
+	/* Configure I²C interface */
+	I21CONCLR = 0xff;
+	I22CONCLR = 0xff;
+	I21CONSET = (1 << 2) | (1 << 6);
+	I22CONSET = (1 << 2) | (1 << 6);
+	I21ADR = 0x50 << 1;
+	I22ADR = 0x51 << 1;
+
+
+	IRQdisable();
+
+	VICIntSelect &= ~(1 << 19);		/* i2c1=bit 19 como IRQ	*/
+	VICIntSelect &= ~(1 << 30);		/* i2c2=bit 30 como IRQ	*/
+
+	VICIntEnable |= (1 << 19);		/* Habilita int do i2c1 no VIC*/
+	VICIntEnable |= (1 << 30);		/* Habilita int do i2c2 no VIC*/
+
+	VICVectAddr19 = (int)hw_handle_irq_i2c_slv1;	/* Vetor para atendimento do I2C2 */
+	VICVectAddr30 = (int)hw_handle_irq_i2c_slv2;	/* Vetor para atendimento do I2C2 */
+
+	IRQenable();
+
+	pprintf("===== IRQ STATUS 2 =====\r\n");
+	pprintf(" I22STAT      0x%x\r\n", I22STAT);
+	pprintf(" I22CONSET    0x%x\r\n", I22CONSET);
+	pprintf(" VICIRQStatus 0x%x\r\n", VICIRQStatus);
+	pprintf(" VICIntSelect 0x%x\r\n", VICIntSelect);
+	pprintf(" VICIntEnable 0x%x\r\n", VICIntEnable);
+
+#endif
 }
 
 /******************************************************************************/
@@ -238,7 +371,7 @@ int hw_i2c_init(void)
 	CHK(hw_set_i2c_control(I2C_IF_TO_SFP, i2c_control.reg));
 	CHK(hw_set_i2c_clock_speed(I2C_IF_TO_SFP, 60));
 
-
+#if 0
 	/************************************************************************/
 	/* Initialize I²C 1 as addressed slave, to be linked in switch side bus */
 	/************************************************************************/
@@ -248,7 +381,7 @@ int hw_i2c_init(void)
 	PCONP |= PCONP_I2C_TO_SW_ADDR_0;
 
 	/* Selec SCL and SDA mode to respective pins */
-	PINSEL_I2C_TO_SW_ADDR_0_SDA |= (PINSEL_I2C_TO_SW_ADDR_1_SDA_VALUE << PINSEL_I2C_TO_SW_ADDR_0_SDA_OFFSET);
+	PINSEL_I2C_TO_SW_ADDR_0_SDA |= (PINSEL_I2C_TO_SW_ADDR_0_SDA_VALUE << PINSEL_I2C_TO_SW_ADDR_0_SDA_OFFSET);
 	PINSEL_I2C_TO_SW_ADDR_0_SCL |= (PINSEL_I2C_TO_SW_ADDR_0_SCL_VALUE << PINSEL_I2C_TO_SW_ADDR_0_SCL_OFFSET);
 
 	/* Configure I²C interface */
@@ -283,15 +416,17 @@ int hw_i2c_init(void)
 	CHK(hw_set_i2c_address(I2C_IF_TO_SWITCH_ADDR_1, 0));
 
 	/* TODO IRQ */
-	VICIntSelect &= ~(1 << 9);		/* i2c2=bit 30 como IRQ	*/
-	VICIntEnable |= (1 << 9);		/* Habilita int do i2c2 no VIC*/
+	VICIntSelect &= ~(1 << 30);		/* i2c2=bit 30 como IRQ	*/
+	VICIntEnable |= (1 << 30);		/* Habilita int do i2c2 no VIC*/
 	VICVectAddr9 = (int)hw_handle_irq_i2c_slv2;	/* Vetor para atendimento do I2C2 */
 	IRQenable();
+#else
+	temporario_inicializa_i2cs_slaves();
+#endif
 
 	// TODO
 	I20SCLH = 100; /* Tempo alto do SCL */
 	I20SCLL = 100; /* Tempo baixo do SCL */
-
 #endif
 	return 0;
 }
@@ -315,14 +450,14 @@ void escreveI2C0(char dado, int endereco)
 				I20CONCLR = START_FLAG;
 				I20CONCLR = INT_FLAG; 
 				break;
-		
+
 			case ENVIOU_ENDERECO_ESCRITA:
 				//lcd_dado('3');
 				I20DAT = endereco;
 				I20CONSET = ACK;
 				I20CONCLR = INT_FLAG;
 				break;
-		
+
 			case FIM_ESCRITA:
 				if(fim == 0)
 				{
@@ -365,11 +500,27 @@ int hw_i2c_read(int dev_addr, int reg_addr)
 #ifndef PC_COMPILATION
 	int leitura = 0;
 	int dado;
+	int sts0 = 0, sts1 = 0, sts2 = 0;
 
 	I20CONSET = START;
 
 	while (I20STAT != END_OF_RECEIVE)
 	{
+		if (sts0 != I20STAT) {
+			sts0 = I20STAT;
+			pprintf("I2C 0 Status: 0x%x\r\n", sts0);
+		}
+
+		if (sts1 != I21STAT) {
+			sts1 = I21STAT;
+			pprintf("I2C 1 Status: 0x%x\r\n", sts1);
+		}
+
+		if (sts2 != I22STAT) {
+			sts2 = I22STAT;
+			pprintf("I2C 2 Status: 0x%x\r\n", sts2);
+		}
+
 		switch (I20STAT)
 		{
 			case SEND_START_BIT:

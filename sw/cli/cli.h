@@ -10,7 +10,7 @@
 #define STR_SFP_RANGE		"[1-2]"
 #define STR_CUST_I2C_RANGE	"[1-5]"
 #define MAX_ARGS			5
-#define MAX_ARG_SIZE		10
+#define MAX_ARG_SIZE		20
 
 /******************************************************************************/
 

@@ -12,6 +12,7 @@ CLOCKFREQ		= 12000
 TARGET			= sfp_tester
 TERMINA			= ltser
 BAUDRATE		= 19200
+#BAUDRATE		= 115200
 
 # Modules, objects and dependences
 SRC = $(wildcard hw-access/*.c)
