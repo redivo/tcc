@@ -1,6 +1,5 @@
 #ifndef __ERRORS_H
 #define __ERRORS_H
-#define DEBUG_MODE
 
 #include "hw_terminal.h"
 

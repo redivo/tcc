@@ -191,6 +191,7 @@ int hw_get_i2c_address(int i2c_number, unsigned char *address)
 }
 
 /******************************************************************************/
+int mem[128];
 
 void hw_handle_irq_i2c_slv1(void) __attribute__ ((interrupt("IRQ")));
 void hw_handle_irq_i2c_slv2(void) __attribute__ ((interrupt("IRQ")));
@@ -215,7 +216,8 @@ int temporario_inicializa_i2cs_slaves(void);
 void hw_handle_irq_i2c_slv2(void)
 {
 #ifndef PC_COMPILATION
-	VICVectAddr = 0;
+	static int c = 0;
+	static int reg = 0;
 
 //	pprintf("\r\n===== IRQ RECEIVED 2 =====\r\n");
 //	pprintf(" VICIRQStatus 0x%x\r\n", VICIRQStatus);
@@ -242,6 +244,7 @@ void hw_handle_irq_i2c_slv2(void)
 //			pprintf("2 ");
 			I22CONSET = ACK;
 			I22CONCLR = INT_FLAG;
+			reg = I22DAT;
 //			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
 //			pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
 //			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
@@ -259,7 +262,8 @@ void hw_handle_irq_i2c_slv2(void)
 
 		case 0xA8:
 //			pprintf("0xA8, enviando dado.\r\n");
-			I22DAT = 0x65;
+			I22DAT = mem[reg + c];
+			c++;
 //			pprintf("4 ");
 			I22CONSET = ACK;
 			I22CONCLR = INT_FLAG;
@@ -269,18 +273,25 @@ void hw_handle_irq_i2c_slv2(void)
 			break;
 
 		case 0xB8:
-//			pprintf("5 ");
-//			pprintf("0xB8, dado recebido pelo master.\r\n");
-			I22DAT = 0x65;
-			I22CONSET = ACK;
-			I22CONCLR = INT_FLAG;
-//			pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
-//			pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
-//			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
+			//			pprintf("5 ");
+			//			pprintf("0xB8, dado recebido pelo master.\r\n");
+			// TODO verifica se pode ler nesse endereço.
+			// TODO verifica se tem resposta forçada nesse endereço.
+//			while (I22STAT == 0xB8) {
+				I22DAT = mem[reg + c];
+				c++;
+				I22CONSET = ACK;
+				I22CONCLR = INT_FLAG;
+//			}
+//						pprintf("\r\nc: %d\r\n", c);
+//						pprintf(" next I2C 2 status:  0x%x\r\n", I22STAT);
+//						pprintf(" next I2C 2 data:    0x%x\r\n", I22DAT);
+//						pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
 			break;
 
 		case 0xC0:
-//			pprintf("0xC0, fim da transmição NACK reebido.\r\n");
+			pprintf("0xC0, fim da transmição NACK reebido. c=%d\r\n", c);
+			c = 0;
 //			pprintf("6 ");
 			I22CONSET = ACK;
 			I22CONCLR = INT_FLAG;
@@ -290,7 +301,7 @@ void hw_handle_irq_i2c_slv2(void)
 			break;		
 
 		default:
-			pprintf("7 0x%x", I22STAT);
+			pprintf("saindo 7 0x%x\r\n", I22STAT);
 //			pprintf("I dont know\r\n");
 			I22CONSET = ACK;
 			I22CONCLR = INT_FLAG;
@@ -299,6 +310,7 @@ void hw_handle_irq_i2c_slv2(void)
 //			pprintf(" next I2C 2 control: 0x%x\r\n", I22CONSET);
 			break;
 	}
+	VICVectAddr = 0;
 #endif
 }
 
@@ -320,8 +332,8 @@ int temporario_inicializa_i2cs_slaves(void)
 	I22CONCLR = 0xff;
 	I21CONSET = (1 << 2) | (1 << 6);
 	I22CONSET = (1 << 2) | (1 << 6);
-	I21ADR = 0x50 << 1;
-	I22ADR = 0x51 << 1;
+	I21ADR = 0;
+	I22ADR = 0;
 
 
 	IRQdisable();
@@ -336,13 +348,6 @@ int temporario_inicializa_i2cs_slaves(void)
 	VICVectAddr30 = (int)hw_handle_irq_i2c_slv2;	/* Vetor para atendimento do I2C2 */
 
 	IRQenable();
-
-	pprintf("===== IRQ STATUS 2 =====\r\n");
-	pprintf(" I22STAT      0x%x\r\n", I22STAT);
-	pprintf(" I22CONSET    0x%x\r\n", I22CONSET);
-	pprintf(" VICIRQStatus 0x%x\r\n", VICIRQStatus);
-	pprintf(" VICIntSelect 0x%x\r\n", VICIntSelect);
-	pprintf(" VICIntEnable 0x%x\r\n", VICIntEnable);
 
 #endif
 }
@@ -371,7 +376,7 @@ int hw_i2c_init(void)
 	CHK(hw_set_i2c_control(I2C_IF_TO_SFP, i2c_control.reg));
 	CHK(hw_set_i2c_clock_speed(I2C_IF_TO_SFP, 60));
 
-#if 0
+#if 1
 	/************************************************************************/
 	/* Initialize I²C 1 as addressed slave, to be linked in switch side bus */
 	/************************************************************************/
@@ -403,10 +408,13 @@ int hw_i2c_init(void)
 	memset(&i2c_control, 0, sizeof(i2c_control));
 
 	/* Turn on power */
+//	PCONP |= (1 << 26); // I2C2
 	PCONP |= PCONP_I2C_TO_SW_ADDR_1;
 
 	/* Selec SCL and SDA mode to respective pins */
+//	PINSEL0 |= (2 << 20); // SDA I2C2
 	PINSEL_I2C_TO_SW_ADDR_1_SDA |= (PINSEL_I2C_TO_SW_ADDR_1_SDA_VALUE << PINSEL_I2C_TO_SW_ADDR_1_SDA_OFFSET);
+//	PINSEL0 |= (2 << 22); // SCL I2C2
 	PINSEL_I2C_TO_SW_ADDR_1_SCL |= (PINSEL_I2C_TO_SW_ADDR_1_SCL_VALUE << PINSEL_I2C_TO_SW_ADDR_1_SCL_OFFSET);
 
 	/* Configure I²C interface */
@@ -418,8 +426,138 @@ int hw_i2c_init(void)
 	/* TODO IRQ */
 	VICIntSelect &= ~(1 << 30);		/* i2c2=bit 30 como IRQ	*/
 	VICIntEnable |= (1 << 30);		/* Habilita int do i2c2 no VIC*/
-	VICVectAddr9 = (int)hw_handle_irq_i2c_slv2;	/* Vetor para atendimento do I2C2 */
+	VICVectAddr30 = (int)hw_handle_irq_i2c_slv2;	/* Vetor para atendimento do I2C2 */
 	IRQenable();
+
+	mem[0] = 0x03;
+	mem[1] = 0x04;
+	mem[2] = 0x07;
+	mem[3] = 0x00;
+	mem[4] = 0x00;
+	mem[5] = 0x00;
+	mem[6] = 0x00;
+	mem[7] = 0x20;
+	mem[8] = 0x40;
+	mem[9] = 0x0c;
+	mem[10] = 0x05;
+	mem[11] = 0x01;
+	mem[12] = 0x15;
+	mem[13] = 0x00;
+	mem[14] = 0x00;
+	mem[15] = 0x00;
+	mem[16] = 0x1e;
+	mem[17] = 0x0f;
+	mem[18] = 0x00;
+	mem[19] = 0x00;
+	mem[20] = 0x41;
+	mem[21] = 0x50;
+	mem[22] = 0x41;
+	mem[23] = 0x43;
+	mem[24] = 0x20;
+	mem[25] = 0x4f;
+	mem[26] = 0x70;
+	mem[27] = 0x74;
+	mem[28] = 0x6f;
+	mem[29] = 0x20;
+	mem[30] = 0x20;
+	mem[31] = 0x20;
+	mem[32] = 0x20;
+	mem[33] = 0x20;
+	mem[34] = 0x20;
+	mem[35] = 0x20;
+	mem[36] = 0x00;
+	mem[37] = 0x00;
+	mem[38] = 0x90;
+	mem[39] = 0x65;
+	mem[40] = 0x4c;
+	mem[41] = 0x4f;
+	mem[42] = 0x4f;
+	mem[43] = 0x50;
+	mem[44] = 0x42;
+	mem[45] = 0x41;
+	mem[46] = 0x43;
+	mem[47] = 0x4b;
+	mem[48] = 0x20;
+	mem[49] = 0x54;
+	mem[50] = 0x45;
+	mem[51] = 0x53;
+	mem[52] = 0x54;
+	mem[53] = 0x45;
+	mem[54] = 0x52;
+	mem[55] = 0x20;
+	mem[56] = 0x00;
+	mem[57] = 0x00;
+	mem[58] = 0x00;
+	mem[59] = 0x00;
+	mem[60] = 0x03;
+	mem[61] = 0x52;
+	mem[62] = 0x00;
+	mem[63] = 0x25;
+	mem[64] = 0x00;
+	mem[65] = 0x12;
+	mem[66] = 0x00;
+	mem[67] = 0x00;
+	mem[68] = 0x31;
+	mem[69] = 0x31;
+	mem[70] = 0x30;
+	mem[71] = 0x38;
+	mem[72] = 0x33;
+	mem[73] = 0x33;
+	mem[74] = 0x35;
+	mem[75] = 0x35;
+	mem[76] = 0x20;
+	mem[77] = 0x20;
+	mem[78] = 0x20;
+	mem[79] = 0x20;
+	mem[80] = 0x20;
+	mem[81] = 0x20;
+	mem[82] = 0x20;
+	mem[83] = 0x20;
+	mem[84] = 0x31;
+	mem[85] = 0x31;
+	mem[86] = 0x30;
+	mem[87] = 0x32;
+	mem[88] = 0x32;
+	mem[89] = 0x33;
+	mem[90] = 0x20;
+	mem[91] = 0x20;
+	mem[92] = 0x00;
+	mem[93] = 0x00;
+	mem[94] = 0x00;
+	mem[95] = 0x15;
+	mem[96] = 0x0a;
+	mem[97] = 0x90;
+	mem[98] = 0xd8;
+	mem[99] = 0xa4;
+	mem[100] = 0x1a;
+	mem[101] = 0x35;
+	mem[102] = 0x27;
+	mem[103] = 0x10;
+	mem[104] = 0x57;
+	mem[105] = 0x00;
+	mem[106] = 0x00;
+	mem[107] = 0x00;
+	mem[108] = 0x00;
+	mem[109] = 0x00;
+	mem[110] = 0x00;
+	mem[111] = 0x00;
+	mem[112] = 0x00;
+	mem[113] = 0x00;
+	mem[114] = 0x00;
+	mem[115] = 0x00;
+	mem[116] = 0x00;
+	mem[117] = 0x00;
+	mem[118] = 0x00;
+	mem[119] = 0x00;
+	mem[120] = 0x00;
+	mem[121] = 0x00;
+	mem[122] = 0x00;
+	mem[123] = 0x00;
+	mem[124] = 0x00;
+	mem[125] = 0x00;
+	mem[126] = 0x00;
+	mem[127] = 0x00;
+
 #else
 	temporario_inicializa_i2cs_slaves();
 #endif
