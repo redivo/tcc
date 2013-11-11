@@ -13,6 +13,7 @@ int hw_init(void)
 	CHK(hw_leds_init());
 	CHK(hw_ctrl_pins_init());
 	CHK(hw_i2c_init());
+	CHK(hw_timer_init());
 
 	return 0;
 }

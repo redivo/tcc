@@ -10,6 +10,8 @@ int main()
 	CHK_PRINT(hw_init());
 	CHK_PRINT(cfg_init());
 
+	pprintf("========== Wecome to SFP-Tester ==========\r\n");
+
 	while (1) {
 		CHK_PRINT(cli_get_cmd());
 		CHK_PRINT(cli_handle_cmd());

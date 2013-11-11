@@ -29,12 +29,39 @@ int cfg_insert_sfp(int sfp)
 
 int cfg_remove_sfp(int sfp)
 {
+	if (!IS_VALID_SFP(sfp))
+		return ERR_INVALID_PARAM;
+
 	/* Disable SFP LED and "remove" pins */
 	CHK(cfg_set_enable(sfp, 0));
 	CHK(hw_enable_led(sfp, 0));
 	CHK(hw_sfp_remove(sfp));
 
 	return 0;
+}
+
+/******************************************************************************/
+
+int cfg_is_sfp_inserted(int sfp)
+{
+	if (!IS_VALID_SFP(sfp))
+		return 0;
+
+	return Cfg.sfp[sfp].enable;
+}
+
+/******************************************************************************/
+
+int cfg_get_sfp_inserted(void)
+{
+	int sfp;
+
+	/* Search for the inserted SFP */
+	FOR_EACH_SFP(sfp)
+		if (Cfg.sfp[sfp].enable)
+			return sfp;
+
+	return ERR_NO_ONE_SFP_INSERTED;
 }
 
 /******************************************************************************/

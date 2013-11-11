@@ -1,5 +1,6 @@
 #include "hw_control_pins.h"
 #include "hw_general.h"
+#include "hw_timer.h"
 #include "errors.h"
 
 /******************************************************************************/
@@ -68,6 +69,10 @@ int hw_sfp_insert(int sfp)
 	CHK(hw_set_value(Sfp_select.port, Sfp_select.pin, !!sfp));
 	CHK(hw_set_value(Sfp_supply_disable[sfp].port, Sfp_supply_disable[sfp].pin, 0));
 
+	/* Update SFP memory data */
+	hw_sleep(2000); // Wait a little time to SFP boot
+	CHK(hw_sfp_memory_update(sfp));
+
 	/* "Insert" pins on order */
 	FOR_EACH_SFP_DIS_SEQ(seq) {
 		CHK(hw_set_value(Sfp_disable_seq[seq].port, Sfp_disable_seq[seq].pin, 0));
@@ -82,6 +87,9 @@ int hw_sfp_insert(int sfp)
 int hw_sfp_remove(int sfp)
 {
 	int seq;
+
+	/* Update SFP memory data */
+	CHK(hw_sfp_memory_update(sfp));
 
 	/* "Remove" pins on order */
 	FOR_EACH_SFP_DIS_SEQ_INV(seq) {

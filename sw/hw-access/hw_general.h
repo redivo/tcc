@@ -7,6 +7,9 @@
 #define INPUT	0
 #define OUTPUT	1
 
+/* Board clock frequency in Hz TODO */
+#define BOARD_CLOCK_FREQ	12000000
+
 /******************************************************************************/
 
 /* Pin struct */

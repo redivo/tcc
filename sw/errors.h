@@ -12,6 +12,7 @@
 #define ERR_SFP_COLISION		-6
 #define ERR_INVALID_I2C			-7
 #define ERR_INVALID_REG			-8
+#define ERR_NO_ONE_SFP_INSERTED	-9
 
 /* Macros */
 #define PRINT_ERR(_r) \
