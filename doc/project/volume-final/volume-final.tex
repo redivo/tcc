@@ -1,0 +1,921 @@
+% Definição do padrão PUCRS - Imprimir nos dois lados
+%\documentclass[brazil,oneside]{ti}
+\documentclass{abnt}
+\usepackage[latin1]{inputenc}
+\usepackage[brazilian]{babel}
+\usepackage[alf,abnt-etal-list=0]{abntcite}
+\usepackage{url}
+\usepackage[flushleft]{threeparttable}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage[table]{xcolor}
+
+
+% Enable Pictures
+\usepackage{graphicx}
+\usepackage{a4wide}
+
+
+% Defines, commands and aliases
+\def ²{\textsuperscript{2}}
+\def ¨{\cellcolor{blue!25}{}}		% Cell collor
+\newcommand{\mr}{\multirow{2}{*}}
+\newcommand{\projname}{SFP ATE }
+\newcommand{\tabtit}{\textbf}
+
+
+\begin{document}
+
+\autor{George Redivo Pinto}
+\titulo{\textbf{Equipamento para teste de transceptores ethernet}}
+\orientador{Prof. Marcos Augusto Stemmer}
+\comentario{Equipamento para automatização de testes de equipamentos de rede dotados de transceptores SFP.}
+\instituicao{Pontifícia Universidade Católica do Rio Grande do Sul}
+\local{Porto Alegre, Rio Grande do Sul, Brasil}
+\data{Novembro de 2013}
+
+\capa
+\folhaderosto
+
+\begin{resumo}
+Durante o desenvolvimento de um sistema, várias etapas de teste são executadas a fim de garantir o correto funcionamento do mesmo.
+Em equipamentos destinados a aplicações críticas, esses testes são massivos, na tentativa de garantir que o equipamento, em hipótese alguma, fuja do comportamento especificado e esperado, quando em campo.
+
+Equipamentos {\it ethernet switch}, além de interagir com outros equipamentos de rede, como {\it hosts}, roteadores e outros {\it switches}, podem possuir portas do tipo {\it Small Form-factor Pluggable transceiver} (SFP) e interagirem diretamente com eles.
+Idealmente, o processo de teste de equipamentos com portas SFP deve incluir testes de inserção e remoção, o que, por sua vez, necessita de intervenção física.
+Essa intervenção é geralmente manual, o que acaba provocando um alto índice de erros.
+
+Nesse contexto, este Trabalho de Conclusão de Curso propõe um equipamento capaz de viabilizar a automatização dos testes de SFP.
+Essa plataforma inclui um módulo de injeção de falhas.
+Em mais detalhes, a plataforma será capaz de fazer a inserção e remoção de dois SFPs diferentes em uma mesma porta do {\it ethernet switch}, além da injeção de falhas no barramento I²C, tudo controlado por comunicação serial, possibilitando assim a automatização do processo como um todo.
+
+A solução proposta foi validada em um equipamento de rede fornecido pela empresa Datacom Telemática.
+Neste sentido, foi realizado uma série de experimentos visando a validação da solução proposta.
+
+\end{resumo}
+
+\begin{abstract}
+During a product design, several steps are performed to guarantee the correct product operation.
+In equipment designed for critical applications, these tests are massively stressed, trying to guarantee that the equipment works according to specifications.
+
+Ethernet switches, also may interact with other network equipment, like hosts, routers and another switches, could have Small Form-factor Pluggable transceiver (SFP) ports and may interact directly with these equipment.
+Ideally the test process on SFP ports must include SFP insertion and removing tests, which requires a physical intervention. This intervention, in general, is done manually, inserting a high human error probability.
+
+This paper proposes an infrastructure to turn automatic SFP tests feasible, including a fault injection module.
+Detailing it, this equipment is capable to perform the insertion and removing of two different SFPs in a same ethernet switch's port.
+It is also capable to do fault injection on I²C bus, all of it controlled by a serial communication, turning possible the automation of this test process.
+
+This solution was validated in a network equipment provided by Datacom Telemática.
+To validate it, several tests was performed to guarantee the functionality of the features proposed in this paper.
+\end{abstract}
+
+\tableofcontents
+\listoftables
+\listoffigures
+
+\chapter*{Lista de Siglas}
+TCC Trabalho de Conclusão de Curso
+
+SFP {\it Small Form-factor Pluggable}
+
+XFP 10 {\it Gigabit Small Form-factor Pluggable}
+
+ATE {\it Automatic Test Equipment}, equipamento de teste automático
+
+MDIX {\it Medium Dependent Interface crossover}, interface cruzada dependente de mídia
+
+MSA {\it Multi-Source Agreement}, acordo multi-fonte
+
+OSI {\it Open Systems Interconnection}, sistema aberto de interconexões
+
+CI Circuito Integrado
+
+DD {\it Digital Diagnostics}, diagnosticos digitais
+
+PCB {\it Printed Circuit Board}, placa de circuito impresso
+
+HS-PCB {\it High Speed} PCB, PCB de alta velocidade
+
+LS-PCB {\it Low Speed} PCB, PCB de baixa velocidade
+
+BIST {\it Built-In Self Tests}
+
+ACK {\it acknowledgement}
+
+SoC {\it System on Chip}
+
+ARM-DEV-KIT {\it ARM Devetopment Kit}, Kit de desenvolvimento ARM
+
+SerDes Serializador/Desserializador
+
+SGMII {\it Serial Gigabit Media Independent Interface}, Interface serial gigabit independente de mídia
+
+%***************************************************************************************************
+%***************************************************************************************************
+
+\chapter{Introdução}
+\label{chp_intro}
+Com o aumento da complexidade dos sistemas atuais, a tarefa de teste é algo de extrema importância.
+Um teste, em linhas gerais, é uma atividade na qual uma ou mais entradas são injetadas em um dado sistema e suas saídas são analisadas, a fim de encontrar discrepâncias entre o comportamento especificado e o comportamento real do sistema.
+
+Dependendo das características e dimensões de um sistema, a tarefa de desenvolvimento pode se tornar bastante complexa \cite{teste_sw_maldonado_bib}, o que torna a atividade de teste de um projeto algo crucial para garantir o bom funcionamento de um produto.
+
+O teste pode ser feito em vários níveis e estágios de produção de um sistema. Desde testes dos circuitos integrados (CIs) que compõe o sistema até testes em campo, utilizando {\it Built-In Self Tests}, BISTs.
+É desejável que um problema seja descoberto no estágio mais básico possível, pois o custo da resolução de um problema sobe conforme o nível em qual ele foi encontrado \cite{teste_hw_bib}.
+
+O teste de um projeto pode ser dividido em várias etapas. Entre elas estão: (1) teste funcional, onde o projeto é testado a fim de garantir a conformidade com sua especificação comportamental e (2) teste comportamental, onde o alvo do teste é excitado de forma a simular o uso real do equipamento ou sistema, tentando encontrar falhas, para que elas sejam corrigidas antes do projeto ser dado como pronto.
+Os estímulos do teste podem ser introduzidos manualmente, com uma pessoa interagindo ativamente com o alvo do teste.
+Outra forma, é utilizando componentes automatizadores de teste, onde um elemento pré programado interage com o alvo do teste, inserindo os estímulos \cite{fault_inj_teq_tools_bib}.
+Esses componentes são chamados equipamento de teste automático, ATE, do inglês {\it Automatic Test Equipment}.
+
+Existem também testes envolvendo injeção de falhas, no qual o equipamento ou sistema é testado em condições anormais.
+Os testes com injeção de falhas são utilizados para observar o comportamento do alvo do teste em uma situação de falha tanto do próprio projeto, quanto de outros subsistemas envolvidos.
+Com os dados obtidos nos testes com injeção de falhas pode-se medir, por exemplo, a robustez do projeto e se ele responde da forma esperada quando encontra um estado de falha.
+As falhas podem ser introduzidas em diversos níveis, desde níveis mais baixos, como curto circuitos, até o nível de usuário, como inserção de um valor inválido em um campo de entrada.
+Esse tipo de teste é muito útil em aplicações críticas, pois essas tem de se manter sempre ativas, muitas vezes implementando módulos de tolerância a falhas para evitar a indisponibilidade do sistema.
+Aplicações críticas são, por exemplo, sistemas de navegação de aeronaves, ou sistemas automatizados de controle de metrô, os quais nunca podem parar, pois causariam um prejuízo muito grande.
+
+Os testes podem ser manuais ou automáticos, dependendo dos requerimentos do teste.
+Testes manuais tem diversas desvantagens quando comparados à testes automáticos, como menor velocidade de execução do teste, tempo gasto com a aprendizagem de um novo procedimento, falta de consistência e possibilidade de erro humano na execução das tarefas.
+Embora muitas das desvantagens sejam relacionadas apenas a requisitos temporais, a possibilidade de erro durante a execução do roteiro de teste está relacionada à credibilidade do teste.
+Se, durante a execução de um teste manual, algum passo do roteiro for pulado, adicionado, ou executado de forma errada, o teste pode apresentar resultados inválidos, tanto falsos positivos quanto falsos negativos.
+Por todos esses motivos, o esforço gasto em automatização de testes vem sendo cada vez maior, assim, os recursos humanos podem ser investidos em outras atividades mais produtivas, como o aprimoramento dos casos de teste, ao invés de serem gastos na execução dos mesmos.
+
+A atividade de teste, além se ser a base um sistema livre de falhas, ajuda a desenvolver estatísticas de rendimento do processo \cite{teste_hw_bib}.
+Assim, dependendo do nível de detalhamento é possível identificar falhas de processo do projeto como um todo, desde a fase de especificação até a fase de produção.
+
+Com o objetivo de flexibilizar o uso, alguns equipamentos de rede possuem portas de comunicação com conector para a inserção de um transceptor ({\it transceiver}) externo.
+Um {\it transceiver}, do ponto de vista de redes de dados, é um dispositivo da camada física, capaz de transmitir e receber dados, fazendo a conversão dos sinais (sinais elétricos em ópticos, por exemplo) e/ou a conversão da interface de comunicação.
+Com diferentes {\it transceivers}, é possível, por exemplo, uma mesma porta de comunicação ser utilizada com fibra óptica ou conetor RJ45.
+
+A configuração aplicada na porta deve ser compatível com o transceptor inserido na mesma, para evitar comportamentos inesperados.
+No entanto, devido à possibilidade de variadas configurações e modelos de transceptores, a configuração se torna algo extremamente delicado e suscetível a erros.
+
+Certos equipamentos são capazes de configurar automaticamente a porta, baseando-se nas informações obtidas do transceptor.
+A dificuldade da autoconfiguração é agravada pelo fato de existir uma grande gama de combinações entre configuração e modelo de transceptor.
+Além disso, existem casos onde equipamentos são logicamente empilhados ({\it stacking}\footnote{Do ponto de vista de equipamentos de rede, quando monta-se um ambiente onde vários equipamentos são ligados uns aos outros, de forma a se tornarem virtualmente um equipamento só, com capacidade somada e controle centralizado, denomina-se um ambiente {\it stacking}.}).
+
+Em um ambiente de {\it staking}, podem existir diversos equipamentos com características diferentes, o que dificulta a configuração destes.
+
+Durante o processo de teste dos {\it trasnceivers}, se faz necessário a conexão e/ou desconexão física dos mesmos, geralmente manual, trazendo os riscos e desvantagens já citadas anteriormente.
+A automatização desses procedimentos resulta em um grande acréscimo na produtividade e confiabilidade do teste, porém isso introduz um elemento a mais no ambiente de testes, um ATE.
+
+Este TCC propõe um solução baseada em {\it hardware} e {\it software} que permite a automatização de testes de equipamentos {\it ethernet} dotados de transceptores SPFs.
+Como estudo de caso foram utilizados transceptores SPFs em {\it switches ethernet}.
+
+%***************************************************************************************************
+%***************************************************************************************************
+
+\chapter{Fundamentação Teórica}
+
+Dentro do universo de redes de dados existem inúmeras distinções entre tipos de equipamentos, funcionalidades e configurações.
+O cenário escolhido para o estudo é o de equipamentos {\it ethernet} dotados de portas SFPs.
+
+%***************************************************************************************************
+
+\section{I²C}
+
+Desenvolvido pela Philips (atual NXP), nos anos 80, a comunicação I²C é uma comunicação em barramento, que utiliza dois fios para tráfego de dados serial.
+Usando uma estrutura mestre-escravo, é possível a comunicação entre vários dispositivos utilizando apenas dois fios, em dreno aberto: um fio de {\it clock} e um de dados, chegando à taxa de transferência de 3,4Mbps \cite{i2c_ref}.
+Devido à simplicidade e versatilidade de implementação, o I²C é largamente usado em comunicações simples que não exigem alta taxa de transferência de dados.
+
+A comunicação I²C se dá através de um barramento onde ficam conectados um dispositivo mestre e até 127 dispositivos escravos (figura \ref{fig_i2c_bus}).
+O dispositivo mestre não possui endereço.
+Os dispositivos escravos possuem um endereçamento de 7 bits, podendo endereçar 127 dispositivos. O endereço 0 é utilizado como endereço geral, uma especie de endereço de {\it broadcast}.
+Existe também um modo de endereçamento de 10 bits, o que aumenta a quantidade de endereços disponíveis.
+
+\begin{figure}[hbt]
+	\centering
+		\includegraphics[scale=1]{figuras/i2c_bus.pdf}
+	\caption{Barramento I²C}
+	\label{fig_i2c_bus}
+\end{figure}
+
+Em linhas gerais, a comunicação se dá da seguinte forma:
+(1) mestre informa ao barramento que deseja se comunicar com um dispositivo informando seu endereço;
+(2) o dispositivo escravo responde um {\it acknowledgement} (ACK);
+(3) mestre informa registrador interno com o qual deseja se conectar;
+(4) escravo responde dado referente ao registrador interno, em caso de leitura, ou faz a atribuição em caso de escrita.
+
+
+%***************************************************************************************************
+
+\section{Portas Ethernet}
+
+A {\it ethernet} é uma arquitetura de rede de dados largamente utilizada.
+Ela é normatizada pela IEEE 802.3, que descreve todos os detalhes da arquitetura.
+As portas de um equipamento {\it ethernet} podem ser de tipos variados e ter configurações distintas.
+Esta sessão destina-se a detalhar as principais características das portas {\it ethernet}.
+
+
+%***************************************************************************************************
+
+\subsection{Modelo OSI}
+% TODO
+O Modelo OSI ({\it Open Systems Interconnection}, sistema aberto de interconexões) é uma das mais antigas e mais usadas arquiteturas de comunicação entre máquinas.
+Este modelo divide a comunicação em 7 camadas hierárquicas.
+Cada camada tem uma função bem definida dentro da comunicação e consegue se comunicar apenas com as camadas adjacentes.
+Essa propriedade modulariza a comunicação de forma a diminuir a complexidade da comunicação como um todo.
+
+As camadas são divididas da seguinte maneira:
+\begin{description}
+	\item[Aplicação] \hfill \\
+		A camada de aplicação é a camada de mais alto nível. É nela que ficam os {\it softwares} como navegadores de internet e clientes de e-mail.
+	\item[Apresentação] \hfill \\
+		Esta camada é responsável pela formatação e conversão dos dados.
+	\item[Sessão] \hfill \\
+		A camada de sessão gerencia o fluxo de dados, sendo responsável por tratamento de erros dessa natureza.
+	\item[Transporte] \hfill \\
+		É responsável pela entrega e recebimento dos dados, tentando garantir a confiabilidade de transmissão.
+	\item[Rede] \hfill \\
+		Esta camada faz o roteamento dos pacotes, escolhendo a melhor rota, baseando-se em métricas como congestionamento e custo do caminho.
+	\item[Enlace] \hfill \\
+		A camada de enlace é o elo entre a camada física e a camada de rede. Ela é responsável pela configuração de fluxo de dados e pela topologia de rede.
+	\item[Física] \hfill \\
+		Esta é a camada de mais baixo nível, onde os sinais lógicos e elétricos são convertidos e enviados.
+\end{description}
+
+Este trabalho atua nas duas camadas de nível mais baixo: camada física e de enlace.
+
+%***************************************************************************************************
+
+\subsection{Portas físicas}
+\label{subsec_portas}
+As portas de um equipamento {\it ethernet} servem para fazer a ligação entre dois dispositivos em uma rede {\it ethernet}.
+Diversos conectores já foram usados em aplicações {\it ethernet} e o mais comum é o conector RJ45, o qual é usado para fazer a ligação com um par trançado\footnote{Par trançado é um tipo de cabeamento onde dois fios, contendo sinais diferenciais, são enrolados um ao redor do outro, a fim de diminuir a suscetibilidade à interferências eletromagnéticas. Cabos {\it ethernet} do padrão CAT 6, por exemplo, contem 4 pares trançados.}.
+Com o desenvolvimento da tecnologia óptica, os cabos de fibra óptica vem se popularizando, principalmente em aplicações de alta frequência e aplicações de longa distância.
+A fibra óptica, por usar a luz, pode trabalhar em frequências muito altas, tem baixo nível de perda de sinal e suscetibilidade a interferência.
+Por outro lado, o cabo elétrico, apesar de não possuir tantas vantagens, chega a 1Gbps e distâncias de até 100 metros por um custo bem inferior à fibra óptica.
+
+Como foi citado no capítulo \ref{chp_intro}, existem equipamentos com portas as quais seu conector não é nem para fibra óptica, nem para RJ45, mas sim conector para algum {\it transceiver}.
+Desta forma, uma mesma porta pode ser usada com cabeamento de fibra óptica ou par trançado, dependendo do transceptor conectado.
+Em aplicações {\it ethernet}, os transceptores mais comumente usados são os SFPs e XFPs. SFPs são geralmente usados para aplicações de rede {\it Gigabit Ethernet}, enquanto XFPs são usando para aplicações de 10 {\it Gigabit Ethernet}.
+
+%***************************************************************************************************
+
+\subsection{Configuração}
+Cada porta {\it ethernet} deve receber uma série de configurações para que tenha uma operação estável.
+Essas configurações ditam desde o {\it bit rate}, até configurações de inversão de TX e RX.
+Os parâmetros mais comuns de configuração de uma porta {\it ethernet} estão listados na tabela \ref{tab_configs}.
+
+
+\begin{table}[htb]
+	\begin{center}
+		\caption{Parâmetros de configuração de portas {\it ethernet}}
+		\label{tab_configs}
+		\begin{tabular}{| l | p{12cm} |}
+			\hline
+			\tabtit{Parâmetro} & \tabtit{Descrição} \\
+			\hline
+			Velocidade					& Informa a velocidade do tráfego na porta.\footnotemark[1] \\
+			\hline
+			{\it Speed Capabilities}	& Informa as configurações de velocidade possíveis para a porta.\footnotemark[2] \\
+			\hline
+			{\it Duplex}				& Informa se a conexão é {\it Full Duplex} ou {\it Half Duplex}.\footnotemark[1] \\
+			\hline
+			{\it Duplex Capabilities}	& Informa as configurações de {\it duplex} possíveis para a porta.\footnotemark[2] \\
+			\hline
+			Negociação					& Informa se os parâmetros de {\it duplex} e velocidade serão forçados ou negociados, utilizando as {\it capabilities}. \\
+			\hline
+			MDIX						& Informa se a ligação de TX e RX está normal, invertida ou se será configurada automaticamente.\footnotemark[3] \\
+			\hline
+			Habilitação					& Informa se a porta está habilitada ou desabilitada. \\
+			\hline
+		\end{tabular}
+		\begin{tablenotes}
+			\small
+			\footnotemark[1]{Configuração válida apenas quando auto negociação está desabilitada.}
+
+			\footnotemark[2]{Configuração válida apenas quando auto negociação está habilitada.}
+
+			\footnotemark[3]{MDIX automático funciona apenas quando auto negociação está habilitada, caso contrário o MDIX permanece com o {\it status} anterior.}
+		\end{tablenotes}
+	\end{center}
+\end{table}
+
+Existe ainda uma configuração referente ao protocolo de comunicação usado entre a camada física e a camada de enlace.
+Essa configuração geralmente é transparente para o usuário da porta, ao contrário das configurações listadas na tabela \ref{tab_configs}.
+A escolha de qual protocolo utilizar depende do protocolo utilizado pelo dispositivo parceiro ligado à porta.
+Dois protocolos normalmente são utilizados: (1) SerDes (Serializador/Desserializador) e (2) SGMII ({\it Serial Gigabit Media Independent Interface})\footnote{SGMII é um protocolo de comunicação criado pela Cisco com o objetivo de viabilizar a utilização entre a camada MAC e PHYs 10/100/1000 com o mínimo possível de perda de sinal \cite{sgmii_bib}.}.
+Os dois são protocolos de comunicação serial.
+O protocolo SerDes é geralmente utilizado em conexões diretas, onde não existe um PHY intermediário (ver sub sessão \ref{sec_phy}), caso contrário utiliza-se o protocolo SGMII.
+
+As configurações a serem feitas dependem de diversos fatores como aplicação, tipo de cabo, tipo de conexão e suporte às configurações por parte das duas pontas da conexão, da porta e, em caso de uso de {\it transceivers}, suporte às configurações por parte dos {\it transceivers}.
+
+Devido a essa variabilidade, a parte do sistema que executa as configurações é extremamente sensível.
+Em casos onde existe um transceptor na porta, essa sensibilidade é acentuada, pois além do suporte de configuração das portas dos dois lados da conexão, a configuração ainda precisa ser coerente com o transceptor.
+Durante o funcionamento do equipamento, é possível trocar o {\it transceiver} de uma determinada porta por outro com características diferentes, o que faz com que configurações diferentes devam ser escolhidas e aplicadas, dependendo das especificações do transceptor.
+
+Exitem ainda equipamentos com portas chamadas portas combo.
+Essas portas são replicadas.
+Para flexibilizar as aplicações do equipamento, cada porta combo é dotada de um conector SFP e um conector RJ45, porém os dois conectores não podem ser usados simultaneamente.
+Essas portas são configuradas de maneira completamente diferente em cada meio (meio óptico, SFP, e meio elétrico, RJ45), o que torna a configuração de portas combo ainda mais sensível a erros.
+
+Com essa dinâmica, a configuração de portas pode se tornar algo complexo, em especial em casos onde o equipamento é provido de um módulo de auto configuração.
+Essas características tornam o teste de configuração e troca de transceptores uma tarefa crítica, pois existem inúmeras combinações de configuração possíveis, tornando o teste uma tarefa longa e um bom alvo para ser automatizado.
+
+%***************************************************************************************************
+%***************************************************************************************************
+
+\section{SFPs}
+\label{sec_sfps}
+SFP ({\it Small Form-factor Pluggable}) é um tipo de transceptor, um modelo de tamanho físico pequeno, utilizado para conexões de baixa e média velocidade (abaixo de 10Gbps).
+Existem diversos tipos de SFPs.
+Os SFPs dividem-se basicamente em SFPs elétricos e SFPs ópticos, os quais mais comumente usam conectores RJ45 e LC, respectivamente.
+
+Os SFPs são descritos por dois MSA ({\it Multi-Source Agreement}), INF-8074 e SFF-8472.
+Esses documentos definem como devem ser as características mecânicas, elétricas e lógicas, como dimensões, impedâncias e endereçamento das informações.
+Como esses documentos não são uma norma oficial, apenas um acordo entre alguns dos grandes fabricantes desses equipamentos, existe a possibilidade de alguns modelos não seguirem as recomendações.
+Isso torna a configuração das portas envolvendo SFPs mais difícil e perigosa.
+SFPs que não seguem as especificações dos MSAs podem apresentar comportamentos indefinidos.
+Por esse motivo alguns fabricantes de equipamentos que usam SFPs tem uma política de homologação de SFPs e bloqueio de SFPs não homologados.
+
+Cada SFP possui pelo menos um dispositivo interno acessado por I²C.
+
+O dispositivo básico, acessado pelo endereço 0x50 \cite{sff-8472_bib}, comum à todos os SFPs, é um bloco de memória onde ficam gravadas as informações sobre o SFP.
+Esse bloco de memória guarda informações como nome do fabricante, número de série, tipo conector, taxa máxima de transmissão e outros dados referentes ao SFP, bem como códigos de checagem.
+
+Além do dispositivo básico, o SFP pode conter outros dispositivos adicionais acessados por I²C, tais como módulo de diagnóstico digital (DD, {\it Diagital Diagnostics}), e PHY interno do SFP.
+Cada dispositivo é acessado através de um endereço I²C diferente.
+
+
+\subsection{Tipos de SFPs}
+\label{sec_tipos_sfp}
+Entre todos os modelos de SFPs existem dois grandes grupos: os SFPs elétricos e os SFPs ópticos.
+Dentro desses grupos existem outras subdivisões. As divisões são feitas a fim de separar os SFPs por taxa de transferência, possibilidade de negociação, {\it capabilities} e, especificamente para SFPs ópticos, existem divisões de comprimento de onda e distância máxima (potência) do {\it laser}.
+
+Os variados tipos de SFPs necessitam de configurações diferentes, alguns suportam mais configurações que outros.
+Isso faz com que, em caso de auto configuração, de alguma forma, o equipamento que está hospedando o SFP deva conseguir descobrir informações pertinentes às configurações e fazer a correta aplicação dessas configurações.
+Essas informações estão dispostas em um memória dentro do SFP, acessada por I²C, cujo mapeamento é descrito pelos documentos INF-8074 e SFF-8472 \cite{inf-8074_bib} \cite{sff-8472_bib}.
+
+A maioria dos SFPs ópticos com taxa de transferência na casa de 1Gbps fazem uma passagem direta ({\it pass-through}) na comunicação com o {\it switch}, através do modo SerDes (figura \ref{fig_phy_pass_through}), utilizando o PHY (melhor detalhado em \ref{sec_phy}) do próprio {\it switch} para fazer as configurações, apenas transformando o sinal óptico em sinal elétrico e vice-versa.
+Já os SFPs elétricos e alguns 100Mbps ópticos possuem um PHY interno, o qual deve ser configurado com os parâmetros vistos na tabela \ref{tab_configs}, além da configuração do próprio {\it switch}.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/phy_pass_through.pdf}
+	\caption{Comunicação {\it pass-through} entre {\it switch} e SFP.}
+	\label{fig_phy_pass_through}
+\end{figure}
+
+%***************************************************************************************************
+
+\subsection{PHY}
+\label{sec_phy}
+PHY, do inglês {\it physical}, do ponto de vista de redes {\it ethernet}, é um dispositivo que trabalha na camada física do modelo OSI, capaz de fazer a conversão de sinais analógicos em digitais, e vice-versa, enviando e recebendo {\it frames ethernet} \cite{wiki_phy_bib}.
+Além das configurações citadas na tabela \ref{tab_configs}, alguns PHYs dispões de configurações e informações mais específicas, como tipo de mídia, protocolo de comunicação e inversão de trilhas.
+
+Esses dispositivos podem ser um CI separado, ou estar integrado em um CI com mais funcionalidades.
+O tráfego de uma porta {\it ethernet} pode passar por mais de um PHY, mesmo antes de sair do equipamento origem.
+Isso acontece em casos de portas combo, por exemplo, onde além de o tráfego passar pelo PHY integrado no SoC ({\it System on Chip}) do {\it switch}, pode passar por mais um PHY, que é responsável de escolher qual meio (porta elétrica ou porta SFP) será enviado ou, em caso de recebimento, qual porta será escutada, como mostra a figua \ref{fig_phy_combo}.
+Outro caso onde há mais de um PHY envolvido, é em ocasiões em que usamos SFPs com PHY embarcado (figura \ref{fig_phy_elect_sfp}), como explicado na sessão \ref{sec_tipos_sfp}, onde esse PHY é acessado através de uma comunicação I²C com o SFP.
+Nesses casos existe um PHY para fazer a comunicação do {\it switch} até o SFP e outro PHY, embarcado no SFP, que faz a comunicação até o outro lado da conexão.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/phy_combo.pdf}
+	\caption{Comunicação através de um PHY combo.}
+	\label{fig_phy_combo}
+\end{figure}
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/phy_electrical_sfp.pdf}
+	\caption{Comunicação através de um PHY interno ao SFP elétrico.}
+	\label{fig_phy_elect_sfp}
+\end{figure}
+
+Em todos os casos onde existe mais de um PHY em um mesmo lado da comunicação é necessário fazer a correta configuração de todos os PHYs. Essas configurações podem variar de caso para caso, dependendo de características estáticas, como da arquitetura do equipamento, e características dinâmicas, como a topologia de rede e aplicação no qual o equipamento em questão está sendo utilizado.
+
+
+%***************************************************************************************************
+
+\subsection{Dispositivos Internos}
+Os SFPs são providos basicamente de uma memória interna.
+Essa memória guarda informações sobre o SFP, como nome do fabricante, código do produto e número de série, além de dados pertinentes à auto configuração, como taxa máxima de dados e {\it Ethernet Standard}.
+
+As informações disponibilizadas na memória do SFP são a base para decisões de autoconfiguração dos equipamentos hospedeiros de SFPs.
+É na memória que está toda a informação estática acessível.
+A disposição das informações da memória dos SFPs são descritas pelos MSAs citados no capítulo \ref{sec_sfps}, mas como foi dito anteriormente, visto que os MSAs não são normas, os SFPs podem ou não seguir essas recomendações.
+
+Ainda existem áreas de memória específicas para o vendedor do SFP.
+Essas áreas possibilitam o vendedor gravar informações como nome do vendedor, {\it part number} específico usado pelo vendedor e quaisquer outras informações, como código de homologação, ou informações adicionais para a identificação do módulo SFP.
+
+Alguns SFPs são providos de um módulo DD, especificado pela SFF-8472, que é um sistema de monitoramento do status do SFP.
+O DD guarda informações como temperatura do SFP, potência do {\it laser} (TX e RX) e tensão de alimentação.
+Esses dados são lidos em tempo real e acessados através de um dispositivo I²C específico.
+Lendo informações de DD é possível ter um relatório da saúde do SFP, o que pode ser usado para executar ações de prevenção ou simplesmente como um informativo ao usuário.
+
+%***************************************************************************************************
+
+\section{Modelos de Falha}
+
+Em um sistema eletrônico problemas podem ocorrer em várias áreas e em vários níveis de abstração.
+Quando se deseja trabalhar na descoberta, ou injeção de algum tipo de problema, é necessário entender em que nível está e como o problema ocorre.
+
+Primeiramente deve-se entender a diferença entre três termos que podem facilmente ser confundidos: defeito, erro e falha.
+Michael L. Bushnell e Vishwani D. Agrawal \cite{agraval_bib} fazem a seguinte definição acerca desses termos:
+
+\begin{itemize}
+	\item Defeito é uma discrepância, em {\it hardware}, entre o sistema implementado e seu respectivo projeto.
+	\item Erro é uma saída errada produzida por um sistema defeituoso.
+	\item Falha é a representação de um err, em um nível de abstração funcional.
+\end{itemize}
+
+A definição do autor é voltada para {\it hardware}, mas também podemos adapta-la para um sistema híbrido, onde {\it hardware} e {\it software} coexistem.
+Nesse contexto, o defeito seria um problema na construção (física, ou lógica), um erro seria a saída errada, produzida pelo defeito, e a falha seria a manifestação do erro, porém em um nível observável pelo usuário.
+
+Assim como o projeto de um sistema, as falhas são modeladas em níveis hierárquicos.
+Os níveis mais baixos apresentam maiores detalhes sobre o as falhas, porém com a modularização pode-se ter uma compreensão maior.
+
+O nível físico é o nível básico, conhecido também como nível de componente.
+Nesse nível ficam os problemas de curtos circuitos e circuitos abertos.
+
+Intermediariamente existe o nível lógico, no qual as falhas são modeladas a nível de portas lógicas.
+Aqui temos falhas de {\it stuck-ats}, falhas de temporização, entre outras.
+
+O nível mais alto é o nível comportamental.
+Esse nível representa falhas funcionais do sistema.
+Falhas de comunicação podem ser representadas nesse nível.
+
+A injeção de falhas abordada nesse estudo é no nível comportamental, por ser falha de comunicação I²C.
+Falhas nesse nível não necessariamente são a nível elétrico.
+Elas podem ser modeladas de acordo com a aplicação em questão \cite{agraval_bib}.
+
+As falhas podem estar associadas à um barramento, à um pino de um CI ou até mesmo a uma interferência oriunda do ambiente.
+Além disso, as falhas podem ser permanentes ou transiente.
+Falhas permanentes são causadas por um dano físico em algum componente do sistema. Esse dano pode ser proveniente do processo de fabricação ou do desgaste do uso do sistema.
+Falhas transientes acontecem por algum tempo e desaparecem, podendo voltar a ocorrer.
+
+Neste estudo, a injeção de falhas feita foi falha de comunicação, porém o ATE desenvolvido tem capacidade de implementar outras falhas como falhas de temporização na comunicação, além de {\it stuck-ats} dos fios do barramento I²C.
+
+%***************************************************************************************************
+
+\section{Tipos de Teste}
+A atividade de desenvolvimento de um sistema é uma tarefa complexa e está sujeita a uma série de problemas.
+Esses problemas são inerentes ao desenvolvimento de um projeto, e eles ocorrerão mesmo com a utilização de métodos e ferramentas de engenharia \cite{teste_sw_maldonado_bib}.
+No desenvolvimento de um produto de alta qualidade, várias etapas de testes são executadas, a fim de garantir a qualidade do projeto.
+Quanto mais crítica é a aplicação do projeto a ser desenvolvido, mais se faz necessário boas técnicas de testes, visando o maior coeficiente de cobertura de falhas.
+
+Ao contrário do que muitos pensam, o objetivo do teste não é provar que um sistema não possui falhas, mas sim encontrar as falhas que tal sistema possui, antes desse ser dado como pronto.
+Quanto mais cedo um problema for detectado, menos custosa será a correção deste.
+Suponhamos que foi detectado um sério problema arquitetural em um dado CI.
+Caso este CI já tenha sido vendido, dependendo da criticidade de sua tarefa, será necessário trocar as unidades que foram vendidas.
+Por outro lado, se o problema for descoberto na fase de projeto, o CI passará por um processo de correção, sem necessidade de um {\it recall}.
+
+Com o aumento da complexidade dos sistemas, podem ser necessários testes em várias etapas do desenvolvimento de um produto.
+Os teste vão desde a etapa de especificação, que verifica se as especificações são coerentes com o que se espera do projeto, até a nível de aplicação, onde são verificadas funcionalidades a nível de usuário.
+
+Mesmo após um produto ser criado, produzido e vendido, pode ser necessário a avaliação constante das condições do produto.
+Nesses casos, durante a etapa de projeto, são previstos mecanismos de detecção de falhas, que são embarcados no sistema (BISTs).
+Esses testes podem ser do modo {\it online} ou {\it offline}.
+Os testes {\it online} são executados durante o funcionamento do sistema, enquanto os {\it offline} param a execução do sistema, ou são rodados em momentos em que o sistema não está ativo, como na inicialização ou encerramento de um ciclo de atividades.
+Um exemplo clássico desse tipo de teste é o teste de memória, que faz um auto teste durante a inicialização do sistema.
+
+Entre os testes executados antes da venda de um produto, está o teste funcional, o qual é abordado neste estudo.
+O teste funcional tem por objetivo encontrar falhas em requisitos funcionais do projeto, verificando inconsistências entre a especificação e a execução real de um sistema.
+Para que esse tipo de teste seja realizado com a maior eficiência possível, é necessário conhecer a arquitetura do sistema.
+Com esse conhecimento é possível gerar casos de teste que excitem partes sensíveis do projeto, ou seja, casos de teste que possuam a maior probabilidade de revelar erros possível.
+
+Por vezes, é necessário mais do que apenas entradas de usuário para que os casos de teste tenham uma cobertura de falhas aceitável.
+Dependendo da área que se quer excitar, é necessário fazer variações de temperatura, incidência de ruídos e até mesmo injeção artificial de falhas, o que será visto no capítulo \ref{sec_mec_inj_falhas}.
+
+%***************************************************************************************************
+
+\section{Mecanismos de Injeção de Falhas}
+\label{sec_mec_inj_falhas}
+Equipamentos tolerantes a falhas são equipamentos capazes de contornar ou se recuperar de um determinado conjunto de falhas.
+Esses equipamentos devem conseguir, de alguma forma, detectar falhas e se recuperar delas.
+
+Alguns equipamentos tolerantes a falhas conseguem se recuperar e partir do estado imediatamente anterior à falha ({\it forward recovery}).
+Outros, ao se recuperar, voltam a um ponto pré determinado ({\it backward recovery}), como um {\it reset}.
+{\it Forward recovery} é um método mais custoso, pois é mais complexo que o {\it backward recovery}, porém proporciona um menor tempo de indisponibilidade.
+
+Muitas vezes o teste de equipamentos tolerantes a falhas não é trivial.
+Isso se dá pelo simples fato de que as falhas não ocorrem frequentemente.
+Em vista disso, são desenvolvidos mecanismos de injeção de falhas, que tem por objetivo injetar artificialmente falhas, a fim de avaliar a efetividade dos mecanismos de  tolerância a falhas de um dado equipamento ou sistema \cite{fault_inj_teq_tools_bib}.
+
+Com injeção de falha, o sistema sobre teste se comporta como se tivesse um problema de fabricação ou comportamental \cite{fault_inj_teq_tools_bib}.
+Em caso de problema comportamental, o comportamento falho injetado é definido através de estatísticas e conhecimento prévio sobre o funcionamento falho do sistema.
+Quando a injeção se trata de um problema no processo de fabricação, como curtos circuitos, circuitos abertos ou {\it stuck-ats}, a injeção feita é baseada em uma análise estrutural dependente do nível de abstração da injeção a ser feita.
+
+Os testes envolvendo injeção de falhas podem ser feitos basicamente em dois níveis: injeção de falhas baseado em simulação e baseado em protótipo.
+Injeção de falhas baseada em simulações é utilizada na etapa de projeto de um sistema, onde o sistema ainda não existe de fato.
+Já a injeção de falhas baseada em protótipo é executada com o sistema real, na sua fase de teste. \cite{fault_inj_teq_tools_bib}
+
+Os mecanismos de injeção de falhas podem ser divididos em três tipos: baseados em {\it hardware}, baseados em {\it software} ou híbridos.
+
+Os mecanismos baseados em {\it hardware} são sistemas físicos adicionais ou alterações do {\it hardware} do projeto alvo de testes.
+Eles visam injetar artificialmente um determinado conjunto de falhas.
+Essas falhas podem ser fenômenos como curtos circuitos, circuitos abertos, flutuação de tensão de alimentação, entre outros.
+
+Quando baseada em {\it software}, a injeção de falhas pode ser feita alterando o código a nível de compilação, com {\it \#ifdefs}, da linguagem C, por exemplo, o que faz com que a injeção de falhas seja estática.
+Outra forma, é adotar uma abordagem, ainda em {\it software}, onde as falhas podem ser controladas em tempo de execução.
+Essa solução implica em uma maior intrusão no {\it software} ``real'', o que pode introduzir problemas não existentes ou mascarar falhas existentes no projeto original, podendo causar falsos positivos e/ou falsos negativos.
+
+A solução híbrida adota as duas abordagens. {\it hardware} e {\it software}, em conjunto.
+
+Enquanto mecanismos em {\it hardware} podem ter um alto custo de tempo e de recursos financeiros, devido ao fato de ele necessariamente precisar ser construído, os mecanismos baseados em {\it software} geralmente exigem apenas custo de tempo.
+Porém, os mecanismos baseados em {\it hardware} geralmente oferecem um risco de distorção de resultado muito menor que os baseados em {\it software}.
+Isso ocorre pelo fato de que quando um módulo extra é introduzido no {\it software}, o comportamento do sistema como um todo sofre uma perturbação ativa, proveniente dessa modificação, que pode alterar sua resposta.
+
+Além das questões como custo e perturbação no sistema, antes da escolha de qual abordagem seguir é necessário conhecer bem qual o tipo de falhas se deseja injetar.
+Algumas falhas simplesmente não podem ser injetadas por uma das abordagens.
+Por exemplo, uma falha de flutuação de tensão não pode ser injetada em {\it software}, assim como valores inválidos em um campo de entrada não podem ser injetados através de {\it hardware}.
+
+Existem também ocasiões onde o mais adequado é a solução híbrida, usando as duas metodologias para implementar diferentes partes do mecanismo de injeção de falhas.
+
+
+%***************************************************************************************************
+%***************************************************************************************************
+
+\chapter{Solução Proposta}
+\label{chp_solucao}
+Como solução para a dificuldade de automatização de testes com SFPs, este trabalho propõe um ATE, baseado em protótipo (ler sessão \ref{sec_mec_inj_falhas}), utilizando metodologia híbrida ({\it hardware} e {\it softwate}), que funciona como um mediador entre os SFPs e o equipamento hospedeiro de SFPs, implementando um módulo de injeção de falhas e um multiplexador de SFPs, que serão detalhados neste capítulo.
+
+Em uma ligação normal, o SFP é ligado diretamente ao {\it switch} (figura \ref{fig_op_normal}), e então ligado à outro dispositivo de rede, o que obriga intervenção física em caso de remoção, inserção ou troca de módulos SFP.
+Com a solução proposta, o SFP será ligado em um equipamento intermediário que, por sua vez será ligado ao {\it switch} (figura \ref{fig_op_ate}).
+Assim é possível atrelar mais de 1 SFP à mesma porta do {\it switch}, sendo escolhido qual estará realmente ligado ao {\it switch} através do controle de uma cadeia de multiplexação.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/normal_operation.pdf}
+	\caption{Operação normal entre {\it switch} e SFP.}
+	\label{fig_op_normal}
+\end{figure}
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/ate_operation.pdf}
+	\caption{Operação com intervenção do ATE entre {\it switch} e SFP.}
+	\label{fig_op_ate}
+\end{figure}
+
+Além de possibilitar a inserção, remoção e troca de SFPs sem intervenção física, o ATE é dotado de um módulo de injeção de falhas, o qual pode facilitar o teste de tolerância a falhas.
+
+A abordagem utilizada pode ser aplicada não somente nos equipamentos usados neste caso de estudo, mas sim em qualquer equipamento principal que trabalha em conjunto com um equipamento secundário.
+Essa generalização é muito poderosa, pois possibilita a aplicação dos conceitos um uma larga gama de aplicações.
+
+%***************************************************************************************************
+
+\section{Multiplexação de SFPs}
+Em funcionamento normal, os SFPs são ligados diretamente ao {\it switch}, como mostra a figura \ref{fig_op_normal}.
+A multiplexação dos SFPs é feita com uma cadeia de multiplexadores que faz a escolha de qual SFP está ligado ao {\it switch} (figura \ref{fig_complete_ate}).
+Os SFPs tem diversos pinos, os quais carregam diferentes sinais, desde alimentação até dados e alerta de erros.
+Esses pinos passam pelos multiplexadores que, dependendo da configuração feita no ATE, ligaram o {\it switch} em um dos SFPs ou nenhum deles.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/complete_ate.pdf}
+	\caption{Visão geral do ATE.}
+	\label{fig_complete_ate}
+\end{figure}
+
+Com multiplexação dos SFPs é possível fazer a inserção e remoção de SFPs de forma muito semelhante ao procedimento manual.
+Desta forma, o processo automatizado é transparente para o equipamento sobre teste, que, por sua vez, produz as mesmas respostas de quando o processo de inserção e remoção é feito manualmente.
+
+Idealmente, a multiplexação deveria ocorrer em todos os sinais, porém a multiplexação dos sinais de TX e RX não fazem parte do escopo deste estudo.
+Por serem sinais de alta frequência (na ordem de GHz), os sinais TX e RX exigem roteamento e terminações especiais, o que não faz parte do objetivo deste estudo.
+Contudo, com caráter experimental, a multiplexação dos sinais de TX e RX foi feita.
+Em testes básicos, o {\it link} foi estabelecido, porém não foi feito testes de {\it stress} de tráfego de dados.
+Com o controle dos sinais de TX e RX, é possível também simular a conexão e desconexão dos cabos, a fim de testar protocolos de comunicação em situações de falhas de {\it link}.
+
+O processo ocorre com o mínimo de intervenção possível. Pinos do SFP que trazem os mesmo sinais (em especial pinos de alimentação) são unidos no {\it layout} da PCB.
+
+%***************************************************************************************************
+
+\section{Módulo de Injeção de Falhas}
+Os SFPs se comunicam através de um barramento I²C, o qual dá acesso aos dispositivos internos do SFP.
+Em casos de falha de um dos dispositivos internos, ou até mesmo problemas na comunicação I²C, o sistema pode entrar em estado de falha.
+Esse tipo de falha é difícil de ser testada, pois raramente se dispõe de SFPs defeituosos, além do que não existem maneiras de configurar o SFP para não responder à comunicação I²C.
+Essa dificuldade de teste é a maior motivação para a integração de um módulo de injeção de falhas ao ATE.
+
+O módulo de injeção de falhas atua na fase seguinte à multiplexação dos SFPs (figura \ref{fig_complete_ate}), na comunicação I²C, podendo injetar falhas em diversas áreas, como PHY, DD e informações sobre o SFP.
+A injeção de falhas é implementada parte em {\it hardware} e parte em {\it software}.
+A parte do {\it hardware} é responsável pela separação dos sinais I²C, enquanto o {\it software} faz o tratamento das informações, implementa as máquinas de estados I²C e a injeção de falhas propriamente dita.
+
+O ATE funciona como um escravo I²C do ponto de vista do {\it switch} e como um mestre I²C do ponto de vista do SFP, como mostra a figura \ref{fig_i2c_buff}.
+Essa arquitetura permite que o ATE decida se a informação recebida por um dos lados deve ir até o outro, até mesmo devolvendo respostas erradas ao requisitante.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/fault_injection.pdf}
+	\caption{Monitoramento e injeção de falhas nos acessos I²C.}
+	\label{fig_i2c_buff}
+\end{figure}
+
+%***************************************************************************************************
+
+\section{Implementação}
+Como já dito, a implementação do projeto é baseada em uma metodologia híbrida de {\it harwdare} e {\it software}.
+O {\it harwdare} é composto pelas PCBs, multiplexadores e conectores do projeto, enquanto o {\it software} contem o controle do {\it hardware}, implementa a injeção de falhas e provê a interface com o usuário.
+
+\subsection{Arquitetura de Hardware}
+O projeto de {\it hardware} visa criar uma infraestrutura física capaz de fazer a multiplexação de todos os sinais do SFPs, além de disponibilizar os sinais I²Cs para que o processador manipule-os.
+A multiplexação deve ser o mais transparente possível para o {\it ethernet siwtch}, alvo de testes.
+Essa transparência garante que as características do SFP sejam observadas pelo {\it ethernet switch} com a mínima interferência do equipamento de teste.
+A figura \ref{fig_hw} mostra como está dividido o {\it hardware} e será detalhada ainda nesta sub sessão.
+
+Dentre os sinais do conector SFP, existem 4 que se destacam. Esses sinais são os pares diferenciais TX e RX.
+Os pares diferenciais TX e RX são os sinais que carregam os dados úteis ao usuário recebidos (RX) e enviados (TX) pelo SFP.
+A frequência de operação desses sinais está diretamente relacionada com o {\it bit rate} do SFP. Por exemplo, se tivermos um SFP de 1Gbps, os dados que trafegam nos pares diferenciais TX e RX, trafegam em uma frequência em torno de 1GHz, o que torna esses sinais extremamente sensíveis.
+
+Em virtude disso, o {\it hardware} foi dividido em duas PCBs: (1) {\it High Speed} PCB (HS-PCB), que faz a conexão com o {\it ethernet switch} e a multiplexação dos pares diferenciais, e (2) a {\it Low Speed} PCB (LS-PCB), que faz a multiplexação dos demais sinais e a conexão com o processador.
+Essa divisão foi feita a fim de diminuir o tamanho físico da PCB que fica conectada ao {\it ethernet switch} e, principalmente, isolar os sinais dos pares diferenciais TX e RX a fim de obter a menor distância de trilha possível, reduzindo assim as chances de interferência e degradação dos sinais.
+A HS-PCB, além de fazer a conexão com o {\it ethernet switch}, faz a conexão com os SFPs e envia os sinais lentos para a LS-PCB, como mostra a figura \ref{fig_hw}.
+
+Além das PCBs que serão desenvolvidas no presente TCC, é utilizado um kit de desenvolvimento ARM (ARM-DEV-KIT).
+Este kit de desenvolvimento possui um microcontrolador ARM, o qual é conectado à LS-PCB.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/hw.pdf}
+	\caption{Projeto de {\it hardware}.}
+	\label{fig_hw}
+\end{figure}
+
+
+%********************
+
+\subsubsection{HS-PCB}
+
+A HS-PCB (figura \ref{fig_hs_pcb_photo}) é basicamente uma PCB conector.
+Além de fazer a conexão com o {\it switch ethernet}, com os SFPs e com a LS-PCB, a HS-PCB faz a multiplexação dos sinais de dados, os pares diferencias TX e RX.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics[scale=0.6]{figuras/hs-pcb.jpg}
+	\caption{Imagem da HS-PCB.}
+	\label{fig_hs_pcb_photo}
+\end{figure}
+
+A multiplexação dos pares diferenciais é, como todas as outras, controlada pelo ARM-DEV-KIT através de dois sinais de controle independentes.
+Esses sinais de controle passam pela LS-PCB antes de chegar na HS-PCB, porém isso acontece puramente por questões mecânicas de montagem do ambiente.
+Para fazer a multiplexação dos pares diferenciais foi utilizado o CI ADG918, da Analog Devices.
+Segundo o fabricante, este CI implementa um multiplexador CMOS e trabalha em alta frequência, na casa de GHz, o que atende as necessidades do sinal trafegado nos pinos de TX e RX do SFPs.
+
+%********************
+
+\subsubsection{LS-PCB}
+
+A LS-PCB (figura \ref{fig_ls_pcb_photo}) faz a multiplexação dos sinais lentos dos SFPs e conexão com o ARM-DEV-KIT, além de um rebaixamento de tensão que é enviado para a HS-PCB para ser usado nos CIs ADG918.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics[scale=0.6]{figuras/ls-pcb.jpg}
+	\caption{Imagem da LS-PCB.}
+	\label{fig_ls_pcb_photo}
+\end{figure}
+
+A figura \ref{fig_ls_pcb_blocos} mostra o {\it layout} em blocos da PCB.
+A multiplexação dos SFPs é feita através de relés e multiplexadores CMOS CD4053.
+Os CIs CD4053 fazem a multiplexação dos sinais de dados, exceto os sinais I²C, que são conectados em forma de barramento.
+Apesar das vantagens, como tamanho reduzido e simplicidade de montagem dos CD4053s, a multiplexação da alimentação dos SFPs foi feita através de uma cadeia de relés.
+Segundo o MSA descrito em \cite{inf-8074_bib}, a corrente de alimentação dos SFPs, pode chegar a 300mA.
+Com um limite nominal de 15mA por porta, não foi possível utilizar o CI CD4053 para a multiplexação dos sinais de alimentação.
+Em virtude disso, a opção de uma cadeia de relés se mostrou atrativa devido à facilidade de montagem do circuito e máxima corrente suficientemente grande para a aplicação.
+Além das vantagens iniciais, a cadeia de relés proporciona um ruído na troca de posição muito semelhante ao ruído da conexão e desconexão manual dos SFPs, devido à característica de contato seco, ou seja, a troca de posição ocorre mecanicamente.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/ls-pcb-blocos.pdf}
+	\caption{Imagem de blocos da LS-PCB}
+	\label{fig_ls_pcb_blocos}
+\end{figure}
+
+A ligação I²C, mostrada na figura \ref{fig_ate_i2c_linkage}, é feita de forma a isolar os SFPs do {\it ethernet switch}, fazendo com que o ATE seja a ligação entre os dois.
+Na LS-PCB existe um barramento I²C que liga uma interface escrava do ARM-DEV-KIT com o {\it switch}. Esse barramento recebe as requisições I²C do {\it switch}, que é o mestre I²C do barramento.
+Os SFPs estão ligados em um outro barramento onde também está ligado uma interface mestre do ARM-DEV-KIT. Esse barramento repassa as requisições I²C permitidas pelo módulo de injeção de falhas.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/ate_i2c_linkage.pdf}
+	\caption{Ligação do I²C entre ATE, SFP e {\it ethernet switch}}
+	\label{fig_ate_i2c_linkage}
+\end{figure}
+
+Os SFPs normalmente tem os mesmos endereçamentos em seus dispositivos I²C internos.
+Para evitar colisão de informação é imprescindível que os dois SFPs ligados no ATE nunca fiquem ligados simultaneamente, ou seja, sempre que a alimentação de um dos SFPs é ligada, a alimentação do outro necessariamente deve estar desligada.
+Todavia, o {\it software} de controle faz testes de coerência para evitar esse tipo de problema.
+
+O circuito rebaixador de tensão usa o CI LM317 em conjunto com um esquema de filtragem tensão proposto no {\it datasheet} do CI.
+Como citado anteriormente, ainda nesta sessão, a tensão rebaixada é utilizada nos multiplexadores GHz localizados na HS-PCB.
+A tensão é rebaixada de 5V para 2,75V, para ficar dentro da faixa de tensão admitida pelo CI.
+
+
+%********************
+
+\subsection{Arquitetura de Sofware}
+O controle da multiplexação dos sinais dos SFPs e a injeção de falhas da comunicação I²C é feita através de um microcontrolador ARM.
+O {\it software} desenvolvido para o ATE está embarcado neste controlador, sem fazer qualquer alteração no {\it software} do sistema alvo de teste.
+Essa abordagem elimina qualquer perturbação decorrente de mutação do programa alvo do teste, uma vez que este não é, de forma alguma, alterado.
+
+O {\it software} contém o programa que controla todo o projeto.
+Programa este, escrito na linguagem C.
+
+A arquitetura do {\it software} (figura \ref{fig_ls_arq_sw}) foi modularizada a fim de facilitar o desenvolvimento e manutenção do código.
+Existem basicamente quatro grandes módulos dividido em três camadas de abstração.
+A modularização em camadas de abstração bem definidas permite que o projeto seja modificado com o mínimo de intrusão possível.
+Por exemplo, caso o processador fosse trocado, apenas a camada de abstração de {\it hardware} necessitaria ser alterada, ou se a interface com o usuário necessitasse de um novo modelo, as camadas mais baixas não seriam afetadas.
+
+\begin{figure}[htb]
+	\centering
+		\includegraphics{figuras/arq-sw.pdf}
+	\caption{Arquitetura do {\it software}}
+	\label{fig_ls_arq_sw}
+\end{figure}
+
+Inicialmente, a camada de interface faz a interface com o usuário. É responsável pelo tratamento das entradas e saídas do programa, para o alto nível.
+
+A camada de configuração faz a análise dos dados inseridos pelo o usuário, coerências, salva as configurações e se comunica com a camada inferior para pedir acesso ao processador.
+
+Por fim, a camada de acesso ao {\it hardware} possui toda a tradução de comandos dependente de processador.
+Essa camada é responsável por atender as requisições da camada de configuração e tratar interrupções de oriundas do {\it hardware}.
+
+Existe um módulo intermediário, localizado na camada de configuração, chamado de módulo de {\it Debug}.
+O módulo de {\it Debug} não necessariamente necessita estar presente na imagem a ser carregada no processador.
+Isso ocorre pois a camada de {\it Debug} é utilizada para fazer verificações e testes durante o desenvolvimento.
+Essa camada dá à quem a usa a possibilidade de ler e escrever em qualquer registrador do processador, além de fazer leituras e escritas no barramento I²C.
+
+\subsubsection{Módulo de Interface com o Usuário}
+
+Este módulo, localizado na camada de Interface, provê uma interface com usuário através de um terminal por linha de comando.
+É possível inserir comandos de ação e comandos de visualização do estado atual.
+
+É através deste módulo que se dá toda a comunicação do ATE desenvolvido neste trabalho com o mundo exterior.
+Através dele é feita a configuração de injeção de falhas e multiplexação dos SFPs.
+
+O módulo possui entradas e saídas padrões, o que torna possível a execução através de {\it scripts} de teste e, consequentemente, a automatização de testes.
+
+Além da óbvia comunicação com o usuário, este módulo também se comunica com os módulos de configuração, módulo de acesso ao {\it hardware} e módulo de {\it debug}.
+A comunicação com o módulo de configuração é destinada a alterar o estado da configuração e buscar informações sobre a configuração atual.
+A comunicação com o módulo de acesso ao {\it hardware} se dá simplesmente para que o {\it hardware} faça a implementação da comunicação serial, que é utilizada para entra e saída de informações.
+
+
+\subsubsection{Módulo de Configuração}
+
+Para fazer a configuração do ATE existe um módulo de configuração.
+Este módulo, ao ser inicializado, parte de uma configuração padrão, onde os dois SFPs estão desconectados e a injeção de falhas está desabilitada.
+A partir da inicialização, é possível alterar o estado da configuração através da entrada de comandos pela interface com o usuário.
+
+O módulo de configuração, além de salvar as configurações (em memória volátil), implementa funções que faz toda a verificação da configuração a ser aplicada, a fim de barrar inconsistências, como  inserção simultânea de dois SFPs.
+Também é dever deste módulo solicitar a alteração do nível lógico dos pinos de controle dos multiplexadores, relés e LEDs de informação.
+
+Além de ser ligado com a interface com o usuário, o módulo de configuração é, quando ativo, ligado ao módulo de {\it debug}, explicado anteriormente.
+Além disso, este módulo faz ligação com outros dois módulos: módulo de acesso ao {\it hardware} e módulo de injeção de falhas.
+O acesso ao {\it hardware} faz a tradução de atribuição dos pinos para os respectivos endereços, enquanto o módulo de injeção de falhas é apenas avisado das configurações das falhas a serem executadas.
+
+
+\subsubsection{Módulo de Acesso ao Hardware}
+
+Este módulo é muito simples.
+Ele basicamente faz a tradução das requisições de atribuição feitas pelo módulo de configuração para o endereço de memória relacionado ao registrador pretendido, além da implementação de terminal serial e máquina de estados I²C.
+
+Apesar de simples, esse módulo é de extrema importância da manutenibilidade do projeto.
+É ele que faz a abstração do processador para o resto da aplicação.
+Sem ele as atribuições e leituras de registradores estariam espalhadas por todo o código, o que tornaria extremamente custosa uma refatoração de código motivada por uma troca de processador.
+
+
+\subsubsection{Módulo de Injeção de Falhas}
+
+O ATE proposto implementa um módulo de injeção de falhas que trabalha na comunicação I²C entre o SFP e o {\it ethernet switch}.
+O módulo de injeção de falhas implementa em {\it software} uma máquina de estados I²C com falhas controladas.
+Este controle é enviado pelo módulo de configuração.
+
+A máquina de estados I²C de injeção de falhas faz diversas verificações onde testam a habilitação da injeção de algumas falhas propostas neste estudo.
+Quando uma ou mais falhas são habilitadas, a máquina de estados se comporta de forma não padrão, ou não esperada pela interface I²C mestre, o que gera a falha.
+
+As falhas escolhidas são falhas na comunicação I²C.
+O projeto implementa as seguintes falhas:
+
+\begin{itemize}
+	\item Falha na leitura e/ou escrita geral de um dispositivo (controlado por endereço de dispositivo);
+	\item Falha na leitura e/ou escrita registrador específico;
+	\item Retorno errado (pré estabelecido) na leitura de um registrador específico.
+\end{itemize}
+
+As falhas podem ser injetadas de forma geral em um endereço de dispositivo I²C ou em um registrador específico de um endereço específico de dispositivo I²C.
+Essa granularidade permite a injeção de vetores de falhas mais precisos, testando diversos aspectos da comunicação I²C.
+
+Com o controle da comunicação I²C é possível a injeção não somente das falhas implementadas nesse estudo.
+Falhas mais específicas podem sem implementadas, como um maior atraso no tempo de resposta a uma requisição, ou falhas esporádicas.
+Uma vez que se tem o controle da máquina I²C, as falhas passíveis de injeção, dado este projeto como base, são inúmeras e implementáveis com facilidade, devido à modularização da arquitetura de {\it software}.
+
+
+%***************************************************************************************************
+%***************************************************************************************************
+
+
+\chapter{Validação e Avaliação}
+
+As verificações e validações foram feitas continuamente durante o processo de desenvolvimento do projeto.
+Essa abordagem evita a propagação de erros e diminui o custo associado ao re-trabalho em casos de defeitos encontrados.
+
+As verificações feitas podem ser divididas em três etapas básicas: (1) teste de montagem, (2) teste funcional e (3) teste de integração.
+
+\begin{description}
+	\item[Teste de Montagem] \hfill \\
+		Nessa etapa a PCB é testada a fim de validar a montagem da placa, buscando defeitos de curtos e circuitos abertos decorrente de possíveis danos à placa inseridos no processo de montagem.
+	\item[Teste de Funcional] \hfill \\
+		O teste funcional destina-se a validar o esquemático da placa de circuito impresso. Nesse teste a PCB é submetida a estímulos a fim de garantir que a PCB está de comportando de maneira esperada aos estímulos injetados.
+	\item[Teste de Integração] \hfill \\
+		Por fim, o sistema une as duas PCBs e o ARM-DEV-KIT, rodando o {\it software} desenvolvido para o ATE, e são feitos testes a fim de validar funcionalmente o sistema como um todo, analisando suas funcionalidades finais.
+\end{description}
+
+%***************************************************************************************************
+
+\section{Teste das PCBs}
+\label{sec_teste_pcbs}
+
+Durante este estudo, as PCBs desenvolvidas foram testadas a fim de garantir se correto funcionamento.
+
+\subsection{Teste de Montagem}
+
+Durante o processo de teste de montagem, apenas a LS-PCB teve problemas.
+Enquanto a HS-PCB foi prototipada utilizando um processo de melhor acabamento, o processo utilizado na LS-PCB foi um processo mais simples.
+Ao contrário da HS-PCB, a LS-PCB não possui verniz, o que torna o processo de soldagem mais perigoso.
+Além disso, os furos de passagem, que ligam uma camada com a outra, foram feitos manualmente.
+Devido a esse problemas, alguns curtos e circuitos abertos foram inseridos no processo de montagem, porém após o teste de montagem ter falhado, foi feito uma revisão na placa e os problemas foram encontrados e corrigidos.
+
+\subsection{Teste Funcional}
+
+O teste funcional foi executado separadamente em cada PCB e nos dois casos foi obtido sucesso.
+As duas PCBs responderam da forma esperada aos estímulos inseridos.
+
+Foi identificado, na LS-PCB, uma melhoria que poderia ser feita.
+Os sinais I²C provenientes dos SFPs eram multiplexados da mesma forma que os outros sinais.
+Com uma análise foi identificado que, como o I²C é uma arquitetura em barramento, ao invés da multiplexação os SFPs poderiam ser ligados simultaneamente no mesmo barramento, desde os dois SFPs não ficassem ligado simultaneamente.
+Essa alteração ajuda a diminuir a complexidade do layout da PCB, porém é apenas um melhoramento.
+Com o intuito de reduzir a complexidade da PCB, foi gerada uma nova revisão de placa contendo essa alteração e outras, detalhadas na sessão \ref{sec_teste_de_integracao}.
+
+%***************************************************************************************************
+
+\section{Teste de Integração}
+\label{sec_teste_de_integracao}
+
+Após a validação das PCBs separadamente, deve-se fazer um teste de integração, unindo {\it hardware} e {\it software}, testando o projeto como um todo.
+
+\subsection{Multiplexação}
+
+Nos testes de multiplexação dos SFPs foi observado que, em casos de SFPs ópticos, quando o {\it laser} era ativado, o consumo de corrente era maior que a corrente máxima suportada pela porta do multiplexador, o que causava desligamento do SFP.
+Em virtude disso o sistema de multiplexação dos sinais de alimentação dos SFPs foi reestruturado a fim de contornar o problema da corrente.
+Como solução a multiplexação da alimentação dos SFPs foi migrada para uma cadeia de relés.
+
+Após novos testes com a solução de contorno foi identificado que o problema foi resolvido.
+Em virtude disso, foi gerada uma nova revisão de placa contendo o novo sistema de multiplexação.
+
+Além do novo sistema de multiplexação, a nova revisão da LS-PCB conta com um rebaixador de tensão, que mostrou necessário para a ligação dos multiplexadores utilizados na HS-PCB, além da modificação citada na sessão \ref{sec_teste_pcbs}.
+
+\subsection{Injeção de Falhas}
+
+O módulo de injeção de falhas foi a última etapa a ser desenvolvida.
+Depois de todo {\it hardware} validado e todo o módulo de multiplexação funcionando perfeitamente, iniciou-se o desenvolvimento do {\it software} e controle de injeção de falhas.
+
+Esta etapa foi desenvolvida em constante processo de teste.
+Após cada pequena etapa do desenvolvimento o módulo era testado e, quando necessário, ajustes eram feitos.
+
+Vários problemas foram encontrados inicialmente.
+Problemas estes relacionados com atraso de resposta da interface I²C, a qual inicialmente não conseguia fazer comunicação com o {\it switch}.
+Depois do problema de comunicação ter sido resolvido, pequenos problemas foram encontrados e corrigidos.
+
+Após testes finais, o módulo de injeção de falhas mostrou-se estável e funcional.
+
+%***************************************************************************************************
+
+\section{Análise dos Resultados}
+
+O projeto de um ATE para equipamentos dotados de SFPs foi testado e validado em um {\it switch ethernet} fornecido pela empresa Datacom.
+
+Neste equipamento foram inseridos diversos modelos de SFPs e testados os módulos de multiplexação e injeção de falhas.
+O projeto, que ao final teve todas suas funcionalidades validadas, mostrou-se uma boa alternativa para os testes de SFPs.
+
+Os resultados finais dos testes revelaram este um sistema estável, com facilidade para a ampliação de suas funcionalidades, e que faz o que se propõe:
+implementa um equipamento que possibilita a automatização de testes de SFPs, provendo injeção de falhas na comunicação I²C com o SFP em teste.
+
+Apesar de não estar no escopo inicial do trabalho, foi feito também, de forma experimental, a multiplexação dos sinais de TX e RX.
+O escopo deste trabalho era um ATE que testasse a configuração, porém com a multiplexação dos sinais de TX e RX é possível fazer o {\it link} entre duas porta.
+Essa funcionalidade, por não estar no escopo, foi testada superficialmente.
+Nos testes foi possível observar {\it link up} entre duas portas, utilizando o ATE, inclusive tráfego de dados.
+
+%***************************************************************************************************
+%***************************************************************************************************
+
+\chapter{Considerações Finais}
+\label{chp_consideracoes}
+A complexidade de alguns equipamentos e sistemas impõe um alto nível de dificuldade durante o processo de verificação e validação.
+A automatização de testes pode ajudar muito em termos de determinismo, tempo de execução e confiabilidade do teste, porém ela pode encontrar, em alguns casos, entraves quanto à implementação da automatização.
+
+Este estudo revela uma alternativa para a automatização de testes de {\it ethernet switches} que usam SFPs.
+A automatização desses testes traz mais confiabilidade à estes, hoje feitos manualmente, além de dar mais agilidade e velocidade.
+
+Apesar de o projeto usar um cenário específico como estudo de caso, os conceitos e técnicas utilizados, como multiplexação independente de sinais, e ATEs híbridos (baseados em {\it hardware} e {\it software}), podem ser aplicados em diversas áreas onde um equipamento principal trabalha em conjunto com equipamento secundário, ou periférico.
+Essa generalização torna o projeto uma arma poderosa no teste funcional e validação de novos equipamentos.
+
+%***************************************************************************************************
+%***************************************************************************************************
+
+\bibliography{bibliografia}
+
+\apendice
+
+\end{document}

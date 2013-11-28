@@ -1,0 +1,1 @@
+pdflatex volume-final.tex && pdflatex volume-final.tex && bibtex volume-final.aux && pdflatex volume-final.tex && pdflatex volume-final.tex && evince volume-final.pdf
