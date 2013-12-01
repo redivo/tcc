@@ -13,14 +13,8 @@
 
 /* Key defines */
 #define KEY_BACKSPACE	0x7F
-//#define KEY_DELETE		0x7F
 #define KEY_RETURN		0x0D
 #define KEY_NEW_LINE	0x0A
-#define KEY_HYPHEN		0x2D
-#define KEY_LEFT_ROW	0x11
-#define KEY_RIGHT_ROW	0x12
-#define KEY_BLANK_SPACE	0x20
-#define KEY_TAB			0x09
 
 /******************************************************************************/
 /**

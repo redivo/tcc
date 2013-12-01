@@ -201,6 +201,24 @@ int cli_get_cmd(void)
 		if (c == KEY_RETURN)
 			break;
 
+#ifndef PC_COMPILATION
+		/* Delete and continue when delete is typed */
+		if (c == KEY_BACKSPACE) {
+			/* Delete only when there is some char typed */
+			if (char_index > 0) {
+				/* Update index */
+				char_index--;
+
+				/* Unprint */
+				pprintf("\b \b");
+
+				/* Clean buffer */
+				cmd_line[char_index] = '\0';
+			}
+			continue;
+		}
+#endif
+
 		if (char_index >= MAX_CMD_SIZE - 1)
 			continue;
 
