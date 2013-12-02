@@ -227,3 +227,15 @@ int cli_cust_force_resp(char *line, int num_of_args)
 
 	return 0;
 }
+
+/******************************************************************************/
+
+int cli_update_i2c(char *line, int num_of_args)
+{
+	int sfp;
+
+	FOR_EACH_SFP(sfp)
+		CHK(hw_sfp_memory_update(sfp));
+
+	return 0;
+}

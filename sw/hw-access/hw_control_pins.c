@@ -50,7 +50,7 @@ int hw_sfp_insert(int sfp)
 
 	/* Update SFP memory data */
 	hw_sleep(2000); // Wait a little time to SFP boot
-//	CHK(hw_sfp_memory_update(sfp));
+	CHK(hw_sfp_memory_update(sfp));
 
 	/* Insert the other pins */
 	CHK(hw_set_value(Sfp_disable_mux.port, Sfp_disable_mux.pin, 0));
@@ -71,7 +71,7 @@ int hw_sfp_remove(int sfp)
 	CHK(hw_set_value(Sfp_supply_disable[sfp].port, Sfp_supply_disable[sfp].pin, 1));
 
 	/* Update SFP memory data */
-//	CHK(hw_sfp_memory_update(sfp));
+	CHK(hw_sfp_memory_update(sfp));
 
 	return 0;
 }

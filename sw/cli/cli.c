@@ -123,6 +123,12 @@ command_t Commands[] = {
 		.argumment_number = 3,
 		.callback = cli_cust_force_resp,
 	},
+	{
+		.command = "update-i2c",
+		.help = "Update the I2C devices' memory.",
+		.argumment_number = 0,
+		.callback = cli_update_i2c,
+	},
 #ifdef DEBUG_MODE
 	{
 		.command = "debug-r",

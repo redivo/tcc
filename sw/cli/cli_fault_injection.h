@@ -74,6 +74,15 @@ int cli_cust_fault_write_en(char *line, int num_of_args);
 int cli_cust_force_resp(char *line, int num_of_args);
 
 /******************************************************************************/
+/**
+ * \brief	Update the I2C devices1 memory
+ * \param line			Pointer to written line
+ * \param num_of_args	Number of typed arguments
+ * \return	0 if OK, error code otherwise.
+ */
+int cli_update_i2c(char *line, int num_of_args);
+
+/******************************************************************************/
 
 #endif /* __CLI_FAULT_INJECTION_H */
 

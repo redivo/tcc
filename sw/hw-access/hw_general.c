@@ -5,6 +5,7 @@
 #include "hw_i2c.h"
 #include "hw_leds.h"
 #include "hw_control_pins.h"
+#include "hw_timer.h"
 
 /******************************************************************************/
 

@@ -14,7 +14,7 @@ int main()
 
 	while (1) {
 		CHK_PRINT(cli_get_cmd());
-		CHK_PRINT(cli_handle_cmd());
+		CHK_PRINT_NO_RET(cli_handle_cmd());
 	}
 
 	return 0;
